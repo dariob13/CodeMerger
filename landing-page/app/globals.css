@@ -91,12 +91,17 @@ h1>span { color:#eee; }
 .platform-download { height:auto; padding:0; display:inline-flex; align-items:center; gap:8px; font-size:13px; line-height:16px; font-weight:400; color:#a4a4a4; }.platform-download:hover { color:#eee; text-decoration:none; }
 .platform-unavailable { display:inline-flex; align-items:center; gap:8px; color:#7a7a7a; white-space:nowrap; }.platform-unavailable>span { font-size:12px; }
 .setup-note { margin:0; color:#7a7a7a; font-size:13px; line-height:16px; letter-spacing:-.039px; white-space:nowrap; }.setup-note>code { color:#a4a4a4; font-family:'Roboto Mono',monospace; font-size:12px; }
-.pixel-horse { position:absolute; z-index:-1; pointer-events:none; top:66px; left:18px; right:18px; }
-.horse-field { position:relative; width:100%; aspect-ratio:1404/728; }
-.horse-tile { position:absolute; width:1.638176638%; height:3.159340659%; border-radius:43.47826087%; background:#eee; opacity:var(--tile-opacity); }
+.ambient-backdrop { position:absolute; z-index:-1; pointer-events:none; top:0; bottom:0; left:50%; width:100%; max-width:1440px; transform:translateX(-50%); overflow:hidden; }
+.ambient-glow { position:absolute; }
+.ambient-glow img { display:block; max-width:none; }
+.ambient-left { left:-180px; top:60px; width:1000px; height:640px; opacity:.65; animation:kf_26_3_opacity_0 24s linear infinite; }
+.ambient-right { left:calc(100% - 680px); top:100px; width:900px; height:600px; opacity:1; animation:kf_26_8_opacity_0 24s linear infinite; }
+/* The two opacity tracks share Figma's original 24-second looping timeline. */
+@keyframes kf_26_3_opacity_0 { 0% { animation-timing-function:ease-in-out; opacity:.65; } 50% { animation-timing-function:ease-in-out; opacity:1; } 100% { opacity:.65; } }
+@keyframes kf_26_8_opacity_0 { 0% { animation-timing-function:ease-in-out; opacity:1; } 50% { animation-timing-function:ease-in-out; opacity:.65; } 100% { opacity:1; } }
 .skip-link { position:fixed; left:20px; top:-100px; z-index:100; border-radius:8px; padding:10px 16px; background:#eee; color:#121212; }.skip-link:focus { top:16px; }
 a:focus-visible,button:focus-visible,.platform-unavailable:focus-visible { outline:2px solid #a4a4a4; outline-offset:4px; }
-@media(min-width:1441px) { .landing-screen { padding-right:max(48px,calc((100vw - 1344px)/2)); padding-left:max(48px,calc((100vw - 1344px)/2)); }.pixel-horse { left:calc((100% - 1404px)/2); right:auto; width:1404px; } }
+@media(min-width:1441px) { .landing-screen { padding-right:max(48px,calc((100vw - 1344px)/2)); padding-left:max(48px,calc((100vw - 1344px)/2)); } }
 @media(max-width:1100px) and (min-width:701px) { .landing-screen { padding-left:32px; padding-right:32px; }.hero-layout { gap:32px; }.agents-section { width:40%; }.hero-copy { width:56%; max-width:none; }h1 { font-size:30px; line-height:37px; }.agent-detail { font-size:11px; }.agent-identity { gap:8px; font-size:13px; }.site-footer { gap:16px; }.platforms { gap:16px; }.setup-note { font-size:11px; }.setup-note>code { font-size:10px; } }
 @media(max-width:700px) {
   .landing-screen { min-height:100svh; padding:12px 20px 0; }
@@ -111,7 +116,8 @@ a:focus-visible,button:focus-visible,.platform-unavailable:focus-visible { outli
   .agent-detail { font-size:12px; letter-spacing:-.036px; }
   .site-footer { height:auto; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:14px; padding:20px 0 28px; }
   .platforms { flex-wrap:wrap; gap:10px 16px; }
-  .pixel-horse { left:4px; right:4px; top:84px; }
+  .ambient-left { left:-240px; top:56px; width:520px; height:400px; }
+  .ambient-right { left:200px; top:140px; width:390px; height:500px; }
 }
 @media(max-width:370px) { .landing-screen { padding-left:16px; padding-right:16px; }.brand { padding-left:10px; padding-right:12px; }.nav-download { padding:0 10px; font-size:12px; }.agent-row { gap:8px; }.agent-identity { gap:8px; font-size:14px; }.agent-detail { font-size:10px; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }

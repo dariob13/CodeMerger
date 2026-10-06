@@ -35,7 +35,7 @@ The visible confirmed agents are Claude Code, Codex, and OpenCode. Gemini CLI ha
 
 The landing page implements the desktop and mobile designs in the Code Merger Figma redesign (file `ZfdmNsLBz7PWNiVJxvumZH`, hero `1:939`). Desktop uses left-aligned run-in copy, a right-hand agent list, floating navigation, and a platform footer. Mobile stacks the hero, actions, agents, and footer and allows scrolling. Original Figma icons are downloaded to `public/figma` and retain their intrinsic sizes.
 
-`PixelHorse` renders the Figma background's 936 rounded tiles. `horse-motion.css` contains 500 exported opacity tracks on the original shared 2.4-second timeline. Figma's Education-plan MCP limit prevented fetching the remaining tracks; those tiles keep their verified resting opacity. Reduced-motion preferences disable all animation.
+The desktop and mobile Figma frames now use two faint monochrome radial glows instead of the pixel horse. `AmbientBackdrop` uses the original local SVG exports in `public/figma/ambient-*.svg`, with the Figma geometry and exported 24-second looping opacity tracks. Both animations share one timeline and stop when reduced motion is preferred. The former horse geometry and hundreds of animation tracks have been removed from the website.
 
 UI primitives use official shadcn/ui components added through its CLI: Button, Card, Badge, Tooltip, and Sonner. Tailwind CSS 4 and neutral dark theme tokens style them. To add more components, run `npm exec --yes --package shadcn@latest -- shadcn add COMPONENT` from this folder; the registry configuration is in `components.json`. Component utility imports should resolve to `@/lib/utils`.
 

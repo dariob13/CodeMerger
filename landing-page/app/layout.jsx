@@ -1,5 +1,4 @@
 import './globals.css';
-import './horse-motion.css';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 

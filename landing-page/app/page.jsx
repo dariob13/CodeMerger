@@ -3,7 +3,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import DownloadButton from '@/components/DownloadButton';
 import GitHubLink from '@/components/GitHubLink';
 import FigmaIcon from '@/components/FigmaIcon';
-import PixelHorse from '@/components/PixelHorse';
+import AmbientBackdrop from '@/components/AmbientBackdrop';
 import { product } from '@/lib/product';
 
 const platformIcons = { macos: 'apple', linux: 'linux', windows: 'windows' };
@@ -11,7 +11,7 @@ const platformIcons = { macos: 'apple', linux: 'linux', windows: 'windows' };
 export default function Home() {
   return <div className="landing-screen">
     <a className="skip-link" href="#main">Skip to content</a>
-    <PixelHorse />
+    <AmbientBackdrop />
     <header className="site-header">
       <a href="/" className="brand" aria-label="Code Merger home"><FigmaIcon name="merge" /><span>code<span className="brand-light">merger</span><span className="brand-period">.</span></span></a>
       <nav className="nav-actions" aria-label="Main navigation"><GitHubLink url={product.githubUrl} compact /><DownloadButton platforms={product.platforms} sourceDownload={product.sourceDownload} compact /></nav>
