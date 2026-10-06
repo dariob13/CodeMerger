@@ -13,6 +13,7 @@ import {
   WorkflowIcon,
 } from "lucide-react"
 import { AgentIcon } from "@/components/agent-icon"
+import { AccountMenu } from "@/components/account-menu"
 import { AgentMark } from "@/components/agent-mark"
 import {
   AlertDialog,
@@ -277,6 +278,7 @@ export function AppSidebar({ state, view, onView, unread, usage, onReloadUsage }
             )}
           </SidebarGroupContent>
         </SidebarGroup>
+        <AccountMenu />
       </SidebarFooter>
 
       <ConnectDialog agent={connecting} onClose={() => setConnecting(null)} />
