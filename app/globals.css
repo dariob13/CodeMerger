@@ -24,6 +24,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-subtle: var(--subtle);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
@@ -66,84 +67,82 @@
 }
 
 /*
-  Glass theme. Surfaces are translucent and blur what is behind them, so most tokens
-  carry an alpha value; --background is the one opaque base under the colour wash.
+  Flat greyscale theme, shared with the landing page: a near-black ground, hairline borders
+  and surfaces that step up in lightness instead of casting shadows.
 */
 :root {
-  --background: oklch(0.965 0.012 275);
-  --foreground: oklch(0.2 0.03 275);
-  --card: oklch(1 0 0 / 60%);
-  --card-foreground: oklch(0.2 0.03 275);
-  --popover: oklch(1 0 0 / 78%);
-  --popover-foreground: oklch(0.2 0.03 275);
-  --primary: oklch(0.24 0.04 275);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.3 0.05 275 / 7%);
-  --secondary-foreground: oklch(0.24 0.04 275);
-  --muted: oklch(0.3 0.05 275 / 6%);
-  --muted-foreground: oklch(0.46 0.03 275);
-  --accent: oklch(0.3 0.05 275 / 9%);
-  --accent-foreground: oklch(0.2 0.03 275);
-  --destructive: oklch(0.55 0.23 27);
-  --border: oklch(0.3 0.05 275 / 12%);
-  --input: oklch(0.3 0.05 275 / 16%);
-  --ring: oklch(0.6 0.12 275);
+  --background: #fafafa;
+  --foreground: #181818;
+  --card: #f4f4f4;
+  --card-foreground: #181818;
+  --popover: #ffffff;
+  --popover-foreground: #181818;
+  --primary: #1d1d1d;
+  --primary-foreground: #f8f8f8;
+  --secondary: #ededed;
+  --secondary-foreground: #181818;
+  --muted: #f0f0f0;
+  --muted-foreground: #585858;
+  --accent: #ededed;
+  --accent-foreground: #181818;
+  --destructive: #cd1526;
+  --border: #e3e3e3;
+  --input: #d9d9d9;
+  --ring: #8a8a8a;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.875rem;
-  --sidebar: oklch(1 0 0 / 50%);
-  --sidebar-foreground: oklch(0.2 0.03 275);
-  --sidebar-primary: oklch(0.24 0.04 275);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.3 0.05 275 / 8%);
-  --sidebar-accent-foreground: oklch(0.2 0.03 275);
-  --sidebar-border: oklch(1 0 0 / 70%);
-  --sidebar-ring: oklch(0.6 0.12 275);
+  --radius: 0.625rem;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #181818;
+  --sidebar-primary: #1d1d1d;
+  --sidebar-primary-foreground: #f8f8f8;
+  --sidebar-accent: #ededed;
+  --sidebar-accent-foreground: #181818;
+  --sidebar-border: #e3e3e3;
+  --sidebar-ring: #8a8a8a;
 
-  --glass: oklch(1 0 0 / 52%);
-  --glass-border: oklch(1 0 0 / 75%);
-  --glass-highlight: oklch(1 0 0 / 90%);
-  --glass-shadow: oklch(0.3 0.08 275 / 16%);
-  --wash: 22%; /* strength of the colour wash behind everything */
-  --agent: oklch(0.6 0.12 275); /* the selected agent's colour, set by the app */
+  --subtle: #6e6e6e; /* tertiary text: timestamps, counts, placeholders */
+  --button-edge: inset 0 1px 0 #ffffff1f, 0 1px 2px #00000014;
+  --agent: #8a8a8a; /* the selected agent's colour, set by the app */
+
+  /* The glass theme's variables, kept so its class names resolve to flat surfaces. */
+  --glass: var(--card);
+  --glass-border: var(--border);
 }
 
 .dark {
-  --background: oklch(0.15 0.025 275);
-  --foreground: oklch(0.97 0.005 275);
-  --card: oklch(1 0 0 / 5%);
-  --card-foreground: oklch(0.97 0.005 275);
-  --popover: oklch(0.23 0.03 275 / 74%);
-  --popover-foreground: oklch(0.97 0.005 275);
-  --primary: oklch(0.96 0.01 275);
-  --primary-foreground: oklch(0.2 0.03 275);
-  --secondary: oklch(1 0 0 / 8%);
-  --secondary-foreground: oklch(0.97 0.005 275);
-  --muted: oklch(1 0 0 / 6%);
-  --muted-foreground: oklch(0.76 0.02 275);
-  --accent: oklch(1 0 0 / 10%);
-  --accent-foreground: oklch(0.97 0.005 275);
-  --destructive: oklch(0.72 0.18 22);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.75 0.1 275);
-  --sidebar: oklch(0.22 0.03 275 / 45%);
-  --sidebar-foreground: oklch(0.97 0.005 275);
-  --sidebar-primary: oklch(0.96 0.01 275);
-  --sidebar-primary-foreground: oklch(0.2 0.03 275);
-  --sidebar-accent: oklch(1 0 0 / 9%);
-  --sidebar-accent-foreground: oklch(0.97 0.005 275);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.75 0.1 275);
+  --background: #121212;
+  --foreground: #eeeeee;
+  --card: #171717;
+  --card-foreground: #eeeeee;
+  --popover: #1c1c1c;
+  --popover-foreground: #eeeeee;
+  --primary: #e8e8e8;
+  --primary-foreground: #141414;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #eeeeee;
+  --muted: #1c1c1c;
+  --muted-foreground: #a4a4a4;
+  --accent: #1f1f1f;
+  --accent-foreground: #eeeeee;
+  --destructive: #ff8880;
+  --border: #292929;
+  --input: #2e2e2e;
+  --ring: #7a7a7a;
+  --sidebar: #121212;
+  --sidebar-foreground: #eeeeee;
+  --sidebar-primary: #e8e8e8;
+  --sidebar-primary-foreground: #141414;
+  --sidebar-accent: #1c1c1c;
+  --sidebar-accent-foreground: #eeeeee;
+  --sidebar-border: #292929;
+  --sidebar-ring: #7a7a7a;
 
-  --glass: oklch(1 0 0 / 5.5%);
-  --glass-border: oklch(1 0 0 / 11%);
-  --glass-highlight: oklch(1 0 0 / 13%);
-  --glass-shadow: oklch(0 0 0 / 55%);
-  --wash: 30%;
+  --subtle: #858585;
+  --button-edge: inset 0 1px 0 #ffffff8c, inset 0 -1px 0 #0000001a;
 }
 
 @layer base {
@@ -151,15 +150,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply text-foreground;
-    /* A soft wash in the four agent colours, so the glass has something to blur. */
-    background:
-      radial-gradient(58rem 40rem at 8% -12%, color-mix(in oklch, #d97757 var(--wash), transparent), transparent 70%),
-      radial-gradient(52rem 42rem at 100% 0%, color-mix(in oklch, #7c6cf0 var(--wash), transparent), transparent 70%),
-      radial-gradient(56rem 44rem at 72% 112%, color-mix(in oklch, #10a37f calc(var(--wash) * 0.8), transparent), transparent 70%),
-      radial-gradient(46rem 40rem at -4% 100%, color-mix(in oklch, #4c8df6 calc(var(--wash) * 0.85), transparent), transparent 70%),
-      var(--background);
-    background-attachment: fixed;
+    @apply bg-background text-foreground;
+    letter-spacing: -0.01em;
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
@@ -167,53 +159,25 @@
   html {
     @apply font-sans;
   }
+  ::selection {
+    background-color: color-mix(in oklab, var(--foreground) 85%, transparent);
+    color: var(--background);
+  }
 }
 
-/* A pane of frosted glass: translucent fill, blur, a hairline edge and a lit top rim. */
+/* A raised surface: one step lighter than the ground, with a hairline edge. */
 @utility glass {
-  background-color: var(--glass);
-  border: 1px solid var(--glass-border);
-  box-shadow:
-    inset 0 1px 0 0 var(--glass-highlight),
-    0 12px 40px -14px var(--glass-shadow);
-  -webkit-backdrop-filter: blur(24px) saturate(1.7);
-  backdrop-filter: blur(24px) saturate(1.7);
+  background-color: var(--card);
+  border: 1px solid var(--border);
 }
 
-/*
-  Glass for the shadcn surfaces, keyed on their data-slot so components/ui stays as generated.
-  Left outside any layer on purpose: these need to win over the utilities those components set.
-*/
-[data-slot="sidebar-inner"],
-[data-slot="sheet-content"],
-[data-slot="dialog-content"],
-[data-slot="alert-dialog-content"],
-[data-slot="dropdown-menu-content"],
-[data-slot="dropdown-menu-sub-content"],
-[data-slot="select-content"] {
-  background-color: var(--popover);
-  border: 1px solid var(--glass-border);
-  box-shadow:
-    inset 0 1px 0 0 var(--glass-highlight),
-    0 20px 60px -20px var(--glass-shadow);
-  -webkit-backdrop-filter: blur(28px) saturate(1.8);
-  backdrop-filter: blur(28px) saturate(1.8);
-}
-
-[data-slot="sidebar-inner"] {
-  background-color: var(--sidebar);
-  border-radius: var(--radius-2xl);
+/* The lit top edge on filled buttons, keyed on data-slot so components/ui stays as generated. */
+[data-slot="button"][data-variant="default"] {
+  box-shadow: var(--button-edge);
 }
 
 [data-slot="dialog-overlay"],
 [data-slot="alert-dialog-overlay"],
 [data-slot="sheet-overlay"] {
-  background-color: oklch(0.15 0.03 275 / 35%);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  :root { --glass: oklch(1 0 0 / 92%); --popover: oklch(1 0 0); --sidebar: oklch(0.985 0.005 275); }
-  .dark { --glass: oklch(0.24 0.03 275); --popover: oklch(0.23 0.03 275); --sidebar: oklch(0.2 0.03 275); }
+  background-color: rgb(0 0 0 / 55%);
 }

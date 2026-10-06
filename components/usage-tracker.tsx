@@ -1,6 +1,6 @@
 "use client"
 
-import { AgentDot } from "@/components/agent-dot"
+import { AgentIcon } from "@/components/agent-icon"
 import { Progress } from "@/components/ui/progress"
 import { resetLabel } from "@/lib/format"
 import type { AgentInfo, AgentUsage, UsageWindow } from "@/lib/types"
@@ -22,8 +22,7 @@ function WindowBar({ agent, window: w }: { agent: AgentInfo; window: UsageWindow
       <Progress
         value={used}
         aria-label={`${agent.name} ${w.label} limit: ${used}% used, ${resetLabel(w.resetsAt)}`}
-        className={cn("h-1.5 bg-sidebar-accent [&>[data-slot=progress-indicator]]:rounded-full", near ? "[&>[data-slot=progress-indicator]]:bg-destructive" : "[&>[data-slot=progress-indicator]]:bg-(--agent)")}
-        style={{ "--agent": agent.color } as React.CSSProperties}
+        className={cn("h-1 bg-sidebar-accent [&>[data-slot=progress-indicator]]:rounded-full", near ? "[&>[data-slot=progress-indicator]]:bg-destructive" : "[&>[data-slot=progress-indicator]]:bg-muted-foreground")}
       />
     </div>
   )
@@ -42,7 +41,7 @@ export function UsageTracker({ agents, usage }: { agents: AgentInfo[]; usage: Ag
       {rows.map(({ agent, u }) => (
         <li key={agent.id} className="grid gap-1.5">
           <div className="flex items-center gap-2 text-sm">
-            <AgentDot color={agent.color} />
+            <AgentIcon id={agent.id} color={agent.color} />
             <span className="truncate font-medium">{agent.name}</span>
             {(u.plan || agent.authDetail) && (
               <span className="ml-auto shrink-0 text-xs text-muted-foreground capitalize">{u.plan || agent.authDetail}</span>

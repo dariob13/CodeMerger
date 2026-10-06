@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { CircleAlertIcon, FileIcon } from "lucide-react"
-import { AgentDot } from "@/components/agent-dot"
+import { AgentIcon } from "@/components/agent-icon"
 import { AgentTimer } from "@/components/agent-timer"
 import { Markdown } from "@/components/markdown"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -13,7 +13,7 @@ import { isImage, type AgentInfo, type Attachment, type Message, type ToolPart }
 function ToolRow({ tool }: { tool: ToolPart }) {
   return (
     <div className="my-1.5 flex min-w-0 items-center gap-2">
-      <Badge variant={tool.status === "error" ? "destructive" : "outline"} className="bg-(--glass) font-mono backdrop-blur-md">
+      <Badge variant={tool.status === "error" ? "destructive" : "outline"} className="bg-card font-mono">
         {tool.status === "running" && <Spinner data-icon="inline-start" />}
         {tool.name}
       </Badge>
@@ -32,7 +32,7 @@ function Attachments({ chatId, files }: { chatId: string; files: Attachment[] })
         isImage(file) ? (
           <a key={file.id} href={url(file)} target="_blank" rel="noopener noreferrer" title={file.name}>
             {/* eslint-disable-next-line @next/next/no-img-element -- a local upload, served as-is */}
-            <img src={url(file)} alt={file.name} className="max-h-48 max-w-64 rounded-2xl border border-(--glass-border) object-cover shadow-lg" />
+            <img src={url(file)} alt={file.name} className="max-h-48 max-w-64 rounded-xl border object-cover" />
           </a>
         ) : (
           <Badge key={file.id} variant="outline" asChild>
@@ -55,7 +55,7 @@ export const ChatMessage = React.memo(function ChatMessage({ chatId, message, ag
       <div className="flex flex-col items-end gap-2">
         {message.attachments?.length ? <Attachments chatId={chatId} files={message.attachments} /> : null}
         {message.text && (
-          <div className="glass max-w-[82%] rounded-3xl rounded-br-lg px-4 py-2.5 text-[15px] leading-7 wrap-anywhere whitespace-pre-wrap">
+          <div className="max-w-[82%] rounded-2xl bg-secondary px-4 py-2.5 text-[15px] leading-7 wrap-anywhere whitespace-pre-wrap">
             {message.text}
           </div>
         )}
@@ -66,7 +66,7 @@ export const ChatMessage = React.memo(function ChatMessage({ chatId, message, ag
   return (
     <article className="min-w-0">
       <header className="mb-1.5 flex flex-wrap items-center gap-2 text-sm font-medium">
-        <AgentDot color={agent?.color} />
+        <AgentIcon id={agent?.id} color={agent?.color} />
         {agent?.name || message.agent}
         {message.model && <span className="font-normal text-muted-foreground">{message.model}</span>}
         <AgentTimer message={message} />

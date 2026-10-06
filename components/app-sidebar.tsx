@@ -4,15 +4,15 @@ import * as React from "react"
 import {
   FolderIcon,
   FolderOpenIcon,
+  GitMergeIcon,
   InboxIcon,
   NotebookPenIcon,
   PlusIcon,
   RefreshCwIcon,
-  SquareTerminalIcon,
   Trash2Icon,
   WorkflowIcon,
 } from "lucide-react"
-import { AgentDot } from "@/components/agent-dot"
+import { AgentIcon } from "@/components/agent-icon"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,15 +114,16 @@ export function AppSidebar({ state, view, onView, unread, usage, onReloadUsage }
   const inactive = agents.filter((a) => !usage.some((u) => u.agent === a.id) && (!a.connected || a.auth === "none"))
 
   return (
-    <Sidebar variant="floating">
+    <Sidebar>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center gap-2.5 px-1.5 py-1.5 font-semibold tracking-tight">
-              <span className="glass grid size-7 place-items-center rounded-lg">
-                <SquareTerminalIcon className="size-4" />
+            <div className="flex h-9 items-center gap-2 px-2 text-[15px] font-medium tracking-tight" aria-label="Code Merger">
+              <GitMergeIcon className="size-[18px]" aria-hidden />
+              <span aria-hidden>
+                code<span className="font-normal text-muted-foreground">merger</span>
+                <span className="font-normal text-subtle">.</span>
               </span>
-              Code Merger
             </div>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -184,6 +185,8 @@ export function AppSidebar({ state, view, onView, unread, usage, onReloadUsage }
                     <SidebarMenuButton
                       isActive={view === "chat" && open && !chat}
                       title={p.cwd}
+                      // On wide screens the chats sit in the workspace column, so the open project is the selection here.
+                      className={view === "chat" && open ? "lg:bg-sidebar-accent lg:font-medium" : undefined}
                       onClick={() => {
                         selectProject(p.id)
                         onView("chat")
@@ -197,7 +200,7 @@ export function AppSidebar({ state, view, onView, unread, usage, onReloadUsage }
                       <Trash2Icon />
                     </SidebarMenuAction>
                     {open && (
-                      <SidebarMenuSub className="mr-0 pr-0">
+                      <SidebarMenuSub className="mr-0 pr-0 lg:hidden">
                         {!own.length && <li className="px-2 py-1 text-xs text-muted-foreground">No chats yet</li>}
                         {own.map((c) => (
                           <SidebarMenuSubItem key={c.id} className="group/chat relative">
@@ -211,7 +214,7 @@ export function AppSidebar({ state, view, onView, unread, usage, onReloadUsage }
                                   closeOnMobile()
                                 }}
                               >
-                                {c.running ? <Spinner className="size-3" /> : <AgentDot color={color(c.lastAgent)} />}
+                                {c.running ? <Spinner className="size-3" /> : <AgentIcon id={c.lastAgent} color={color(c.lastAgent)} className="size-3" />}
                                 <span>{c.title}</span>
                               </button>
                             </SidebarMenuSubButton>
@@ -258,7 +261,7 @@ export function AppSidebar({ state, view, onView, unread, usage, onReloadUsage }
                 {inactive.map((a) => (
                   <SidebarMenuItem key={a.id}>
                     <SidebarMenuButton size="sm" className="text-muted-foreground" onClick={() => setConnecting(a)}>
-                      <AgentDot color={a.connected ? a.color : undefined} className="mx-0.5" />
+                      <AgentIcon id={a.id} color={a.connected ? a.color : undefined} className="mx-0.5 size-3" />
                       <span>{a.name}</span>
                     </SidebarMenuButton>
                     <SidebarMenuBadge>

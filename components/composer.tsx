@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { ArrowUpIcon, ChevronDownIcon, FileIcon, ImageIcon, PaperclipIcon, PlusIcon, ShieldAlertIcon, SquareIcon, XIcon } from "lucide-react"
-import { AgentDot } from "@/components/agent-dot"
+import { AgentIcon } from "@/components/agent-icon"
 import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
@@ -125,7 +125,7 @@ export function Composer({ state }: { state: ChatsState }) {
     : "No agent"
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-4">
+    <div className="mx-auto w-full max-w-3xl px-4 pt-2 pb-4">
       <input ref={filePicker} type="file" multiple hidden onChange={(e) => (addFiles(e.target.files || []), (e.target.value = ""))} />
       <input
         ref={photoPicker}
@@ -137,8 +137,8 @@ export function Composer({ state }: { state: ChatsState }) {
       />
 
       <InputGroup
-        // Glass, with a glow in the selected agent's colour while typing.
-        className="glass rounded-3xl p-1 transition-shadow duration-300 has-[[data-slot=input-group-control]:focus-visible]:border-(--agent)/50 has-[[data-slot=input-group-control]:focus-visible]:shadow-[inset_0_1px_0_0_var(--glass-highlight),0_0_0_1px_color-mix(in_oklch,var(--agent)_35%,transparent),0_18px_60px_-18px_var(--agent)] has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:bg-(--glass)"
+        // A raised surface whose edge brightens while typing.
+        className="rounded-2xl bg-card p-1 transition-colors has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:bg-card"
         onDragOver={(e) => e.dataTransfer.types.includes("Files") && e.preventDefault()}
         onDrop={(e) => {
           if (!e.dataTransfer.files.length) return
@@ -182,7 +182,7 @@ export function Composer({ state }: { state: ChatsState }) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
-                  <InputGroupButton variant="outline" size="icon-sm" className="rounded-full bg-transparent" aria-label="Add files or photos">
+                  <InputGroupButton variant="outline" size="icon-sm" className="bg-transparent" aria-label="Add files or photos">
                     <PlusIcon />
                   </InputGroupButton>
                 </DropdownMenuTrigger>
@@ -206,7 +206,7 @@ export function Composer({ state }: { state: ChatsState }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <InputGroupButton variant="ghost" size="sm" aria-label={`Agent, model and effort: ${summary}`}>
-                {agent && <AgentDot color={agent.color} />}
+                {agent && <AgentIcon id={agent.id} color={agent.color} />}
                 {summary}
                 {access === "full" && <ShieldAlertIcon className="text-destructive" aria-label="Full access" />}
                 <ChevronDownIcon className="text-muted-foreground" />
@@ -219,7 +219,7 @@ export function Composer({ state }: { state: ChatsState }) {
                   {agents.map((a) => (
                     // Stays open, so the model and effort can be set right after picking the agent.
                     <DropdownMenuRadioItem key={a.id} value={a.id} disabled={!a.connected} onSelect={(e) => e.preventDefault()}>
-                      <AgentDot color={a.connected ? a.color : undefined} />
+                      <AgentIcon id={a.id} color={a.connected ? a.color : undefined} />
                       {a.name}
                       <span className={`ml-auto pl-4 text-xs ${a.auth === "none" ? "text-destructive" : "text-muted-foreground"}`}>
                         {[agentStatus(a), a.authDetail].filter(Boolean).join(" · ")}
@@ -268,7 +268,7 @@ export function Composer({ state }: { state: ChatsState }) {
           <Tooltip>
             <TooltipTrigger asChild>
               {running ? (
-                <InputGroupButton variant="default" size="icon-sm" className="ml-auto rounded-full" aria-label="Stop" onClick={stop}>
+                <InputGroupButton variant="default" size="icon-sm" className="ml-auto" aria-label="Stop" onClick={stop}>
                   <SquareIcon className="fill-current" />
                 </InputGroupButton>
               ) : (
@@ -278,7 +278,7 @@ export function Composer({ state }: { state: ChatsState }) {
                   aria-label="Send"
                   // aria-disabled, because a disabled control would dim the whole input group
                   aria-disabled={!canSend}
-                  className="ml-auto rounded-full aria-disabled:cursor-default aria-disabled:opacity-40"
+                  className="ml-auto aria-disabled:cursor-default aria-disabled:opacity-40"
                   onClick={submit}
                 >
                   <ArrowUpIcon />

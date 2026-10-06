@@ -20,6 +20,15 @@ export function relativeTime(ts: number, now = Date.now()) {
   return relative.format(Math.round(seconds / 86400), "day")
 }
 
+// A chat's age in a narrow column: "now", "4m", "18h", "3d".
+export function shortAge(ts: number, now = Date.now()) {
+  const minutes = Math.floor(Math.max(0, now - ts) / 60_000)
+  if (minutes < 1) return "now"
+  if (minutes < 60) return `${minutes}m`
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}h`
+  return `${Math.floor(minutes / 1440)}d`
+}
+
 export function scheduleLabel(schedule: Schedule) {
   if (schedule.kind === "manual") return "Only when you run it"
   if (schedule.kind === "daily") {
