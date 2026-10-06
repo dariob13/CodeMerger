@@ -3,6 +3,7 @@
 import * as React from "react"
 import { ArrowUpIcon, ChevronDownIcon, FileIcon, ImageIcon, PaperclipIcon, PlusIcon, ShieldAlertIcon, SquareIcon, XIcon } from "lucide-react"
 import { AgentIcon } from "@/components/agent-icon"
+import { AgentMark } from "@/components/agent-mark"
 import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
@@ -22,7 +23,7 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } fro
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { ChatsState } from "@/hooks/use-chats"
 import { agentStatus } from "@/lib/agent-status"
-import { isImage, type Access } from "@/lib/types"
+import { isImage, type Access, type Persona } from "@/lib/types"
 
 const ACCESS: Record<Access, { label: string; hint: string }> = {
   read: { label: "Read-only", hint: "Reads the folder and answers" },
@@ -77,7 +78,7 @@ function FileChip({ draft: { file, preview }, onRemove }: { draft: Draft; onRemo
   )
 }
 
-export function Composer({ state }: { state: ChatsState }) {
+export function Composer({ state, personas }: { state: ChatsState; personas: Persona[] }) {
   const { agents, agent, pick, running, setPick, send, stop } = state
   const [text, setText] = React.useState("")
   const [files, setFiles] = React.useState<Draft[]>([])
@@ -86,6 +87,8 @@ export function Composer({ state }: { state: ChatsState }) {
   const filePicker = React.useRef<HTMLInputElement>(null)
   const photoPicker = React.useRef<HTMLInputElement>(null)
 
+  // One of the user's own agents, while the CLI it runs on is the one selected.
+  const persona = personas.find((p) => p.id === pick.persona && p.agent === agent?.id)
   const valid = (options: Option[] | undefined, value: string | undefined) => (options?.some(([v]) => v === value) ? value! : "")
   const model = valid(agent?.models, agent && pick.models[agent.id])
   const effort = valid(agent?.efforts, agent && pick.efforts[agent.id])
@@ -108,7 +111,7 @@ export function Composer({ state }: { state: ChatsState }) {
     setText("")
     setFiles([])
     setSending(true)
-    const sent = await send(draft.text.trim(), { model, effort, access, files: draft.files.map((d) => d.file) })
+    const sent = await send(draft.text.trim(), { model, effort, access, persona: persona?.id ?? "", files: draft.files.map((d) => d.file) })
     setSending(false)
     if (sent) release(draft.files)
     else {
@@ -119,7 +122,7 @@ export function Composer({ state }: { state: ChatsState }) {
 
   // "Claude · Opus · High": only the choices that differ from the agent's defaults.
   const summary = agent
-    ? [agent.short, model && agent.models.find(([v]) => v === model)?.[1], effort && agent.efforts.find(([v]) => v === effort)?.[1]]
+    ? [persona?.name ?? agent.short, model && agent.models.find(([v]) => v === model)?.[1], effort && agent.efforts.find(([v]) => v === effort)?.[1]]
         .filter(Boolean)
         .join(" · ")
     : "No agent"
@@ -161,7 +164,7 @@ export function Composer({ state }: { state: ChatsState }) {
           autoFocus
           readOnly={!agent}
           aria-label="Message"
-          placeholder={agent ? `Message ${agent.name}…` : "Connect an agent to start chatting"}
+          placeholder={agent ? `Message ${persona?.name ?? agent.name}…` : "Connect an agent to start chatting"}
           className="max-h-60 min-h-12 px-4 pt-3.5 text-[15px] md:text-[15px]"
           onChange={(e) => setText(e.target.value)}
           onPaste={(e) => {
@@ -206,16 +209,42 @@ export function Composer({ state }: { state: ChatsState }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <InputGroupButton variant="ghost" size="sm" aria-label={`Agent, model and effort: ${summary}`}>
-                {agent && <AgentIcon id={agent.id} color={agent.color} />}
+                {persona ? <AgentMark name={persona.name} className="size-3.5" /> : agent && <AgentIcon id={agent.id} color={agent.color} />}
                 {summary}
                 {access === "full" && <ShieldAlertIcon className="text-destructive" aria-label="Full access" />}
                 <ChevronDownIcon className="text-muted-foreground" />
               </InputGroupButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="top" className="w-72">
+              {personas.length > 0 && (
+                <>
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>Your agents</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={persona?.id ?? ""}
+                      onValueChange={(id) => {
+                        const next = personas.find((p) => p.id === id)
+                        if (next) setPick({ persona: next.id, agent: next.agent })
+                      }}
+                    >
+                      {personas.map((p) => {
+                        const engine = agents.find((a) => a.id === p.agent)
+                        return (
+                          <DropdownMenuRadioItem key={p.id} value={p.id} disabled={!engine?.connected} onSelect={(e) => e.preventDefault()}>
+                            <AgentMark name={p.name} className="size-3.5" />
+                            {p.name}
+                            <span className="ml-auto pl-4 text-xs text-muted-foreground">on {engine?.short || p.agent}</span>
+                          </DropdownMenuRadioItem>
+                        )
+                      })}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuGroup>
-                <DropdownMenuLabel>Agent</DropdownMenuLabel>
-                <DropdownMenuRadioGroup value={agent?.id} onValueChange={(id) => setPick({ agent: id })}>
+                <DropdownMenuLabel>{personas.length ? "Coding agents" : "Agent"}</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={persona ? "" : agent?.id} onValueChange={(id) => setPick({ agent: id, persona: "" })}>
                   {agents.map((a) => (
                     // Stays open, so the model and effort can be set right after picking the agent.
                     <DropdownMenuRadioItem key={a.id} value={a.id} disabled={!a.connected} onSelect={(e) => e.preventDefault()}>

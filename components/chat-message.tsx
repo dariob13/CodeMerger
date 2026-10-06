@@ -3,6 +3,7 @@
 import * as React from "react"
 import { CircleAlertIcon, FileIcon } from "lucide-react"
 import { AgentIcon } from "@/components/agent-icon"
+import { AgentMark } from "@/components/agent-mark"
 import { AgentTimer } from "@/components/agent-timer"
 import { Markdown } from "@/components/markdown"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -47,6 +48,9 @@ function Attachments({ chatId, files }: { chatId: string; files: Attachment[] })
   )
 }
 
+// An agent saves to its memory with REMEMBER lines. The server lifts them out when the reply ends; until then they are hidden here.
+const withoutMemoryLines = (text: string) => text.replace(/^[ \t]*REMEMBER:.*$/gim, "").trimEnd()
+
 type Props = { chatId: string; message: Message; agent?: AgentInfo }
 
 export const ChatMessage = React.memo(function ChatMessage({ chatId, message, agent }: Props) {
@@ -66,14 +70,34 @@ export const ChatMessage = React.memo(function ChatMessage({ chatId, message, ag
   return (
     <article className="min-w-0">
       <header className="mb-1.5 flex flex-wrap items-center gap-2 text-sm font-medium">
-        <AgentIcon id={agent?.id} color={agent?.color} />
-        {agent?.name || message.agent}
+        {message.persona ? (
+          <>
+            <AgentMark name={message.persona.name} active={message.status === "running"} />
+            {message.persona.name}
+            <span className="font-normal text-subtle">on {agent?.name || message.agent}</span>
+          </>
+        ) : (
+          <>
+            <AgentIcon id={agent?.id} color={agent?.color} />
+            {agent?.name || message.agent}
+          </>
+        )}
         {message.model && <span className="font-normal text-muted-foreground">{message.model}</span>}
         <AgentTimer message={message} />
       </header>
       {message.parts.map((part, i) =>
-        part.type === "text" ? <Markdown key={i} text={part.text} /> : <ToolRow key={part.id} tool={part} />
+        part.type === "text" ? (
+          <Markdown key={i} text={message.persona ? withoutMemoryLines(part.text) : part.text} />
+        ) : (
+          <ToolRow key={part.id} tool={part} />
+        )
       )}
+      {message.remembered?.map((fact) => (
+        <p key={fact} className="mt-2 flex w-fit max-w-full items-center gap-2 rounded-full border bg-secondary py-1 pr-3 pl-2.5 text-xs text-muted-foreground">
+          <AgentMark name={message.persona?.name || ""} className="size-2.5 text-subtle" />
+          <span className="truncate">Remembered: {fact}</span>
+        </p>
+      ))}
       {message.error && (
         <Alert variant="destructive" className="mt-2">
           <CircleAlertIcon />

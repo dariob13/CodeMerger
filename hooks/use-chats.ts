@@ -17,10 +17,11 @@ import {
 } from "@/lib/types"
 
 // What the next message is sent with. Model and effort are remembered per agent.
-export type Pick = { agent: string; access: Access; models: Record<string, string>; efforts: Record<string, string> }
-export type SendOptions = { model: string; effort: string; access: Access; files: File[] }
+// `persona` is one of the user's own agents, or "" to talk to the CLI directly.
+export type Pick = { agent: string; persona: string; access: Access; models: Record<string, string>; efforts: Record<string, string> }
+export type SendOptions = { model: string; effort: string; access: Access; persona: string; files: File[] }
 
-const DEFAULT_PICK: Pick = { agent: "", access: "read", models: {}, efforts: {} }
+const DEFAULT_PICK: Pick = { agent: "", persona: "", access: "read", models: {}, efforts: {} }
 const fail = (err: unknown) => toast.error(err instanceof Error ? err.message : String(err))
 
 // All app state: detected agents, the chat list, the open chat and its live reply.

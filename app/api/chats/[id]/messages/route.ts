@@ -13,7 +13,9 @@ export async function POST(request: Request, { params }: RouteContext<"/api/chat
   const attachments = ids.flatMap((id) => chat.uploads?.[String(id)] ?? [])
   const text = typeof body.text === "string" ? body.text.trim() : ""
   if (!text && !attachments.length) return fail("Message is empty.")
-  const info = (await detected()).find((d) => d.agent.id === body.agent)
+  // One of the user's own agents answers through the CLI it runs on.
+  const persona = typeof body.persona === "string" && body.persona ? state.personas.find((p) => p.id === body.persona) : undefined
+  const info = (await detected()).find((d) => d.agent.id === (persona?.agent ?? body.agent))
   if (!info) return fail("Unknown agent.")
   if (!info.bin) return fail(`${info.agent.name} is not connected. Install its CLI, then recheck.`)
   if (!isDir(chat.cwd)) return fail(`Working folder no longer exists: ${chat.cwd}`)
@@ -21,7 +23,7 @@ export async function POST(request: Request, { params }: RouteContext<"/api/chat
   const model = typeof body.model === "string" && /^[\w.:/#@-]{0,100}$/.test(body.model) ? body.model : ""
   const effort = info.agent.efforts.some(([value]) => value === body.effort) ? String(body.effort) : ""
 
-  const { user, message } = startTurn(chat, info, { text, attachments, model, effort, access })
+  const { user, message } = startTurn(chat, info, { text, attachments, model, effort, access, persona })
   await saveChat(chat)
   return json({ user, message, chat: summary(chat) }, 202)
 }

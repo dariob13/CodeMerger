@@ -21,6 +21,8 @@ export type AssistantMessage = {
   error?: string
   ts: number
   finishedAt?: number // persisted when the agent ends; absent in older chats
+  persona?: { id: string; name: string } // set when one of the user's own agents answered
+  remembered?: string[] // what that agent saved to its memory from this reply
 }
 export type Message = UserMessage | AssistantMessage
 
@@ -124,6 +126,22 @@ export type InboxItem = {
   agent: string
   ts: number
   read: boolean
+}
+
+// ---------- agents the user sets up ----------
+
+export type Memory = { id: string; text: string; ts: number }
+
+// A named agent with standing duties and a memory. It answers through one of the agent CLIs.
+export type Persona = {
+  id: string
+  name: string
+  duties: string
+  agent: string // the CLI it runs on
+  memories: Memory[]
+  createdAt: number
+  updatedAt: number
+  lastUsedAt: number | null
 }
 
 // ---------- usage ----------

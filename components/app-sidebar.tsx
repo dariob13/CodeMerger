@@ -13,6 +13,7 @@ import {
   WorkflowIcon,
 } from "lucide-react"
 import { AgentIcon } from "@/components/agent-icon"
+import { AgentMark } from "@/components/agent-mark"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,10 +95,13 @@ type Props = {
   onReloadUsage: () => Promise<void>
 }
 
+const AgentsIcon = () => <AgentMark name="agents" className="mx-px size-3.5" />
+
 const SECTIONS = [
   { view: "inbox", label: "Inbox", icon: InboxIcon },
   { view: "notes", label: "Notes", icon: NotebookPenIcon },
   { view: "automations", label: "Automations", icon: WorkflowIcon },
+  { view: "agents", label: "Agents", icon: AgentsIcon },
 ] as const
 
 export function AppSidebar({ state, view, onView, unread, usage, onReloadUsage }: Props) {

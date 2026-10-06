@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { ChevronRightIcon, FolderIcon, FolderPlusIcon, SquareTerminalIcon } from "lucide-react"
+import { AgentsView } from "@/components/agents-view"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AutomationsView } from "@/components/automations-view"
 import { ChatMessage } from "@/components/chat-message"
@@ -16,22 +17,26 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { useChats } from "@/hooks/use-chats"
 import { useInbox } from "@/hooks/use-inbox"
+import { usePersonas } from "@/hooks/use-personas"
 import { useUsage } from "@/hooks/use-usage"
 
-export type View = "chat" | "inbox" | "notes" | "automations"
-const TITLES: Record<Exclude<View, "chat">, string> = { inbox: "Inbox", notes: "Notes", automations: "Automations" }
+export type View = "chat" | "inbox" | "notes" | "automations" | "agents"
+const TITLES: Record<Exclude<View, "chat">, string> = { inbox: "Inbox", notes: "Notes", automations: "Automations", agents: "Agents" }
 
 export function ChatApp() {
   const state = useChats()
   const { chat, agents, project, projects, reloadChats } = state
   const inbox = useInbox(reloadChats) // a new inbox item means an automation made a new chat
   const { usage, reload: reloadUsage } = useUsage(state.running) // limits move when a reply finishes
+  const personas = usePersonas(state.running) // a reply finishing may have added to an agent's memory
   const [view, setView] = React.useState<View>("chat")
   const chatTitle = !project ? "New project" : chat?.title || "New chat"
   const title = view === "chat" ? chatTitle : TITLES[view]
   const bottom = React.useRef<HTMLDivElement>(null)
   const atBottom = React.useRef(true)
   const messages = chat?.messages
+  const replying = messages?.[messages.length - 1]
+  const working = replying?.role === "assistant" && replying.status === "running" ? (replying.persona?.id ?? null) : null
 
   // Follow the reply as it streams, unless the user has scrolled up to read.
   React.useEffect(() => {
@@ -91,6 +96,18 @@ export function ChatApp() {
           )}
           {view === "notes" && <NotesView />}
           {view === "automations" && <AutomationsView agents={agents} projects={projects} onRunStarted={state.upsertSummary} />}
+          {view === "agents" && (
+            <AgentsView
+              personas={personas}
+              agents={agents}
+              working={working}
+              onChat={(persona) => {
+                state.setPick({ persona: persona.id, agent: persona.agent })
+                state.newChat()
+                setView("chat")
+              }}
+            />
+          )}
 
           {/* No project yet: the first thing to do is create the folder the agents will work in. */}
           {view === "chat" && state.ready && !project && (
@@ -142,7 +159,7 @@ export function ChatApp() {
             </div>
           </ScrollArea>
 
-          {view === "chat" && project && <Composer state={state} />}
+          {view === "chat" && project && <Composer state={state} personas={personas.personas} />}
         </div>
       </SidebarInset>
     </SidebarProvider>

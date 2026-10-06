@@ -17,6 +17,7 @@ import type {
   Message,
   UsageReport,
   Note,
+  Persona,
   Project,
   StreamEvent,
 } from "@/lib/types"
@@ -57,6 +58,7 @@ type State = {
   notes: Note[]
   automations: Automation[]
   inbox: InboxItem[]
+  personas: Persona[]
   // Rate limits as each agent last reported them, by agent id.
   usage: Record<string, UsageReport & { updatedAt: number }>
   scheduler?: ReturnType<typeof setInterval>
@@ -129,6 +131,7 @@ function load(): State {
     notes: readList<Note>("notes"),
     automations: readList<Automation>("automations"),
     inbox: readList<InboxItem>("inbox"),
+    personas: readList<Persona>("personas"),
     usage: readUsage(),
   }
 }
@@ -161,8 +164,8 @@ export async function recordUsage(agentId: string, report: UsageReport | null) {
   await fsp.rename(tmp, file)
 }
 
-// Projects, notes, automations and the inbox are small lists, each kept whole in one file.
-export async function saveList(name: "projects" | "notes" | "automations" | "inbox") {
+// Projects, notes, automations, the inbox and the user's agents are small lists, each kept whole in one file.
+export async function saveList(name: "projects" | "notes" | "automations" | "inbox" | "personas") {
   const file = path.join(DATA, `${name}.json`)
   const tmp = `${file}.${newId()}.tmp`
   await fsp.writeFile(tmp, JSON.stringify(state[name], null, 1))
@@ -171,6 +174,8 @@ export async function saveList(name: "projects" | "notes" | "automations" | "inb
 
 const globalState = globalThis as typeof globalThis & { __codeMerger?: State }
 export const state: State = (globalState.__codeMerger ??= load())
+// A dev server that was already running holds state from before agents existed.
+state.personas ??= readList<Persona>("personas")
 
 export async function saveChat(chat: Chat) {
   const file = path.join(CHATS, `${chat.id}.json`)

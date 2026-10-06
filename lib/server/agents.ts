@@ -456,9 +456,13 @@ function isExecutable(file: string) {
 
 function which(command: string) {
   if (command.includes(path.sep)) return isExecutable(command) ? command : null
+  // On Windows a CLI is installed as command.exe. Script shims (.cmd) are left out: they can't be spawned without a shell.
+  const names = process.platform === "win32" && !path.extname(command) ? [`${command}.exe`, command] : [command]
   for (const dir of searchPath()) {
-    const full = path.join(dir, command)
-    if (isExecutable(full)) return full
+    for (const name of names) {
+      const full = path.join(dir, name)
+      if (isExecutable(full)) return full
+    }
   }
   return null
 }

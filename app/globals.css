@@ -176,6 +176,34 @@
   box-shadow: var(--button-edge);
 }
 
+/* An agent's mark: nine cells, some lit. The grid ripples from the top-left corner while the agent works. */
+.agent-mark {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8%;
+  flex-shrink: 0;
+}
+.agent-mark > i {
+  aspect-ratio: 1;
+  border-radius: 42%;
+  background-color: currentColor;
+  opacity: 0.16;
+}
+.agent-mark > i[data-lit] {
+  opacity: 1;
+}
+.agent-mark[data-active] > i {
+  animation: agent-mark-wave 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--d) * 120ms);
+}
+@keyframes agent-mark-wave {
+  0%, 60%, 100% { opacity: 0.16; }
+  25% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-mark[data-active] > i { animation: none; }
+}
+
 [data-slot="dialog-overlay"],
 [data-slot="alert-dialog-overlay"],
 [data-slot="sheet-overlay"] {

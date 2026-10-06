@@ -7,15 +7,17 @@ import {
   type AssistantMessage,
   type Attachment,
   type Message,
+  type Persona,
   type StreamEvent,
   type UserMessage,
 } from "@/lib/types"
 import { childEnv, type DetectedAgent, type ParsedEvent } from "./agents"
+import { keepMemories, personaPreamble } from "./personas"
 import { newId, recordUsage, saveChat, settleTools, state, summary, uploadsDir, type Chat, type Run } from "./store"
 
 const HANDOFF_LIMIT = 60000 // chars of earlier conversation given to an agent that missed it
 
-type TurnOptions = { model: string; effort: string; access: Access; userIndex: number }
+type TurnOptions = { model: string; effort: string; access: Access; userIndex: number; persona?: Persona }
 type AttemptOptions = { prompt: string; sessionId: string | null; model: string; effort: string; access: Access; attachments: Attachment[] }
 type AttemptResult = { sessionId: string | null; code: number | null; stderr: string }
 
@@ -132,7 +134,7 @@ function attempt(run: Run, chat: Chat, info: DetectedAgent, options: AttemptOpti
   })
 }
 
-async function runTurn(chat: Chat, run: Run, info: DetectedAgent, { model, effort, access, userIndex }: TurnOptions) {
+async function runTurn(chat: Chat, run: Run, info: DetectedAgent, { model, effort, access, userIndex, persona }: TurnOptions) {
   const { agent } = info
   const message = run.message
   const user = chat.messages[userIndex]
@@ -140,9 +142,11 @@ async function runTurn(chat: Chat, run: Run, info: DetectedAgent, { model, effor
   const shared = { model, effort, access, attachments: (user.role === "user" && user.attachments) || [] }
   const known = agent.plainText ? undefined : chat.sessions[agent.id]
   const failed = (r: AttemptResult) => !run.stopped && Boolean(message.error || r.code !== 0)
+  // One of the user's own agents: its duties and memory go ahead of every prompt.
+  const role = persona ? personaPreamble(persona) : ""
 
   let result = await attempt(run, chat, info, {
-    prompt: buildPrompt(chat.messages.slice(known ? known.seen : 0, userIndex), text),
+    prompt: role + buildPrompt(chat.messages.slice(known ? known.seen : 0, userIndex), text),
     sessionId: known?.sessionId || null,
     ...shared,
   })
@@ -152,7 +156,7 @@ async function runTurn(chat: Chat, run: Run, info: DetectedAgent, { model, effor
     message.parts = []
     delete message.error
     broadcast(run, { type: "snapshot", message })
-    result = await attempt(run, chat, info, { prompt: buildPrompt(chat.messages.slice(0, userIndex), text), sessionId: null, ...shared })
+    result = await attempt(run, chat, info, { prompt: role + buildPrompt(chat.messages.slice(0, userIndex), text), sessionId: null, ...shared })
   }
 
   settleTools(message)
@@ -168,6 +172,7 @@ async function runTurn(chat: Chat, run: Run, info: DetectedAgent, { model, effor
   } else {
     message.status = "done"
   }
+  if (persona && message.status !== "error") await keepMemories(persona, message).catch(console.error)
 
   message.finishedAt = Date.now()
   if (result.sessionId) chat.sessions[agent.id] = { sessionId: result.sessionId, seen: chat.messages.length }
@@ -175,7 +180,7 @@ async function runTurn(chat: Chat, run: Run, info: DetectedAgent, { model, effor
   chat.updatedAt = Date.now()
 }
 
-type NewTurn = { text: string; attachments?: Attachment[]; model: string; effort: string; access: Access }
+type NewTurn = { text: string; attachments?: Attachment[]; model: string; effort: string; access: Access; persona?: Persona }
 
 // Adds the user's message and an empty reply to the chat, then starts the agent on it.
 export function startTurn(chat: Chat, info: DetectedAgent, turn: NewTurn, onDone?: (message: AssistantMessage) => void) {
@@ -184,6 +189,7 @@ export function startTurn(chat: Chat, info: DetectedAgent, turn: NewTurn, onDone
   const user: UserMessage = { id: newId(), role: "user", text: turn.text, ts: now }
   if (turn.attachments?.length) user.attachments = turn.attachments
   const message: AssistantMessage = { id: newId(), role: "assistant", agent: info.agent.id, model: turn.model, parts: [], status: "running", ts: now }
+  if (turn.persona) message.persona = { id: turn.persona.id, name: turn.persona.name }
   if (!userIndex && chat.title === "New chat") chat.title = (turn.text || user.attachments?.[0].name || "New chat").replace(/\s+/g, " ").slice(0, 60)
   chat.messages.push(user, message)
   chat.lastAgent = info.agent.id
@@ -191,7 +197,7 @@ export function startTurn(chat: Chat, info: DetectedAgent, turn: NewTurn, onDone
 
   const run: Run = { proc: null, stopped: false, message, listeners: new Set() }
   state.runs.set(chat.id, run)
-  runTurn(chat, run, info, { model: turn.model, effort: turn.effort, access: turn.access, userIndex })
+  runTurn(chat, run, info, { model: turn.model, effort: turn.effort, access: turn.access, userIndex, persona: turn.persona })
     .catch((err: Error) => {
       console.error(err)
       settleTools(message)
