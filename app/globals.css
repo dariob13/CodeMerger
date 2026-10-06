@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* The landing page is its own site with its own styles; keep its class names out of this build. */
+@source not "../landing-page";
+
 @custom-variant dark (&:is(.dark *));
 
 /* Token colours follow the app theme; code remains escaped React text. */

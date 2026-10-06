@@ -45,5 +45,5 @@ next-env.d.ts
 /workspace/
 /.old/
 
-# separate project kept out of this repo
-/landing-page/
+# a clone of this repo that was made inside it
+/git/
