@@ -44,3 +44,6 @@ next-env.d.ts
 /data/
 /workspace/
 /.old/
+
+# separate project kept out of this repo
+/landing-page/
