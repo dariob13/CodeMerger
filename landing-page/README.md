@@ -21,7 +21,7 @@ npm start
 
 ## Deploy on Vercel
 
-Import your repository in Vercel and set **Root Directory** to `landing-page`. The framework is **Next.js**, the build command is `npm run build`, and the install command is `npm ci`. Leave the output directory at its framework default. No environment variables or custom server are required. This project has been built locally; it has not been deployed.
+Import your repository in Vercel and set **Root Directory** to `landing-page`. The framework is **Next.js**, the build command is `npm run build`, and the install command is `npm ci`. Leave the output directory at its framework default. No environment variables or custom server are required. Production: https://landing-page-ebon-theta-82.vercel.app. Deploy this folder with `npx vercel deploy --prod`.
 
 ## Product details
 
@@ -33,7 +33,7 @@ The visible confirmed agents are Claude Code, Codex, and OpenCode. Gemini CLI ha
 
 ## Design and components
 
-A single viewport with no page scrolling, inspired by https://www.usemono.dev: a larger centered headline, pill-shaped download and GitHub buttons, seven tightly spaced agent icons immediately below, and direct platform download links at the bottom. All agent artwork is framed to the same visible size, accounting for transparent padding inside the SVGs. Agents appear as icons only, monochrome at rest; hover and keyboard focus reveal their original brand colours without showing text. Accessible names remain on the icon controls. Naturally monochrome brand artwork stays monochrome. The original decorative workspace backdrop uses a pointer-following spotlight, with static behavior on touch devices and when reduced motion is preferred.
+A single viewport with no page scrolling, inspired by https://www.usemono.dev: a larger centered headline, pill-shaped download and GitHub buttons, seven tightly spaced agent icons immediately below, and direct platform download links at the bottom. All agent artwork is framed to the same visible size, accounting for transparent padding inside the SVGs. Agents appear as icons only, monochrome at rest; hover and keyboard focus reveal their original brand colours without showing text. Accessible names remain on the icon controls. Naturally monochrome brand artwork stays monochrome. The decorative background uses slow CSS-only ambient light gradients and a faint grid. Reduced-motion preferences disable the animation.
 
 UI primitives use official shadcn/ui components added through its CLI: Button, Card, Badge, Tooltip, and Sonner. Tailwind CSS 4 and neutral dark theme tokens style them. To add more components, run `npm exec --yes --package shadcn@latest -- shadcn add COMPONENT` from this folder; the registry configuration is in `components.json`. Component utility imports should resolve to `@/lib/utils`.
 

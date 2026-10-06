@@ -1,12 +1,11 @@
 import { GitMerge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import DownloadButton from '@/components/DownloadButton';
 import GitHubLink from '@/components/GitHubLink';
 import GitHubStars from '@/components/GitHubStars';
-import SpotlightBackdrop from '@/components/SpotlightBackdrop';
+import AnimatedBackdrop from '@/components/AnimatedBackdrop';
 import BrandIcon from '@/components/BrandIcon';
 import { product } from '@/lib/product';
 
@@ -15,9 +14,7 @@ const platformIcons = { macos: 'apple', linux: 'linux', windows: 'windows' };
 export default function Home() {
   return <div className="single-screen">
     <a className="skip-link" href="#main">Skip to content</a>
-    <SpotlightBackdrop>
-      <Card className="ghost-workspace"><div className="ghost-toolbar"><span /><span /><span /></div><CardContent className="ghost-content"><div className="ghost-sidebar">{Array.from({ length: 7 }, (_, index) => <span key={index} />)}</div><div className="ghost-chat"><div className="ghost-message"><span /><span /><span /></div><div className="ghost-message second-message"><span /><span /><span /><span /></div><div className="ghost-composer" /></div></CardContent></Card>
-    </SpotlightBackdrop>
+    <AnimatedBackdrop />
 
     <header className="site-header"><a href="/" className="brand" aria-label="Code Merger home"><GitMerge aria-hidden="true" /><span>code<span className="brand-light">merger</span><span className="brand-period">.</span></span></a></header>
 
