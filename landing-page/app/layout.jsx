@@ -1,4 +1,5 @@
 import './globals.css';
+import './horse-motion.css';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -13,7 +14,7 @@ export const metadata = {
   },
 };
 
-export const viewport = { themeColor: '#101012', colorScheme: 'dark' };
+export const viewport = { themeColor: '#121212', colorScheme: 'dark' };
 
 export default function RootLayout({ children }) {
   return <html lang="en" className="dark"><body><TooltipProvider delayDuration={180}>{children}<Toaster theme="dark" position="bottom-center" /></TooltipProvider></body></html>;

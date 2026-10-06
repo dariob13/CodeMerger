@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Star } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import FigmaIcon from '@/components/FigmaIcon';
 import { formatStars, readRepositoryStars, repositoryApiUrl } from '@/lib/github';
 
-export default function GitHubStars({ url }) {
+export default function GitHubStars({ url, compact = false }) {
   const [result, setResult] = useState(null);
   const apiUrl = repositoryApiUrl(url);
   const count = result?.apiUrl === apiUrl ? result.count : null;
@@ -39,9 +38,9 @@ export default function GitHubStars({ url }) {
     };
   }, [apiUrl]);
 
-  return <Badge variant="outline" className="star-counter" role="status" aria-live="polite" aria-atomic="true" aria-label={count == null ? 'GitHub stars: count not available yet' : `${count.toLocaleString('en')} GitHub stars`}>
-    <Star aria-hidden="true" />
+  return <span className="star-counter" role="status" aria-live="polite" aria-atomic="true" aria-label={count == null ? 'GitHub stars: count not available yet' : `${count.toLocaleString('en')} GitHub stars`}>
+    <FigmaIcon name={compact ? 'star-nav' : 'star'} />
     <span className="star-count">{count == null ? '—' : formatStars(count)}</span>
     <span className="sr-only">stars</span>
-  </Badge>;
+  </span>;
 }
