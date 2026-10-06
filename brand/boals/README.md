@@ -2,6 +2,8 @@
 
 ## Direction 2 — more playful, more reduced
 
+The extracted vector assets are available in [svg/](svg/README.md), with a [visual preview](svg/preview.html) and a [ZIP download](boals-svg-assets.zip).
+
 [Overview board](brandkit-overview-v2.png) · [Generation prompt](generation-prompt-v2.txt)
 
 A single round face with two pill-shaped eyes replaces the connected silhouette. A bold lowercase wordmark, curious glances, blinking expressions, and gentle bouncing give the identity personality with very few shapes.
