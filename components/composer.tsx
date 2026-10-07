@@ -1,14 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { ArrowUpIcon, FileIcon, ImageIcon, PaperclipIcon, PlusIcon, SquareIcon, XIcon } from "lucide-react"
+import { ArrowUpIcon, BookOpenIcon, FileIcon, ImageIcon, PaperclipIcon, PlusIcon, SquareIcon, XIcon } from "lucide-react"
+import { toast } from "sonner"
 import { AgentPicker } from "@/components/agent-picker"
+import { SkillPicker } from "@/components/skill-picker"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { ChatsState } from "@/hooks/use-chats"
-import { isImage, type Access, type Persona } from "@/lib/types"
+import { useSkills } from "@/hooks/use-skills"
+import { isImage, type Access, type AgentSkill, type Persona } from "@/lib/types"
 
 const MAX_FILES = 20
 
@@ -42,6 +45,11 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
   const [text, setText] = React.useState("")
   const [files, setFiles] = React.useState<Draft[]>([])
   const [sending, setSending] = React.useState(false)
+  const catalog = useSkills(state.project?.id, agent?.id, active)
+  const [selectedByContext, setSelectedByContext] = React.useState<Record<string, AgentSkill[]>>({})
+  const selectedSkills = selectedByContext[catalog.key] || []
+  const [skillsOpen, setSkillsOpen] = React.useState(false)
+  const [skillQuery, setSkillQuery] = React.useState("")
   const input = React.useRef<HTMLTextAreaElement>(null)
   const filePicker = React.useRef<HTMLInputElement>(null)
   const photoPicker = React.useRef<HTMLInputElement>(null)
@@ -56,7 +64,14 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
   const model = valid(agent?.models, agent && pick.models[agent.id])
   const effort = valid(agent?.efforts, agent && pick.efforts[agent.id])
   const access: Access = agent?.access.includes(pick.access) ? pick.access : "read"
-  const canSend = Boolean(agent) && !sending && (Boolean(text.trim()) || files.length > 0)
+  const canSend = Boolean(agent) && !sending && (Boolean(text.trim()) || files.length > 0 || selectedSkills.length > 0)
+  const removeSkill = (id: string) => setSelectedByContext((prev) => ({ ...prev, [catalog.key]: (prev[catalog.key] || []).filter((skill) => skill.id !== id) }))
+  const selectSkill = (skill: AgentSkill) => {
+    setText((prev) => /^\/[\w:-]*$/.test(prev.trim()) ? "" : prev)
+    if (selectedSkills.some((s) => s.id === skill.id)) { removeSkill(skill.id); return }
+    if (selectedSkills.length >= 5) { toast.error("Select up to 5 skills per message"); return }
+    setSelectedByContext((prev) => ({ ...prev, [catalog.key]: [...(prev[catalog.key] || []), skill] }))
+  }
 
   const addFiles = (list: Iterable<File>) => {
     const room = MAX_FILES - files.length
@@ -70,16 +85,18 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
 
   const submit = async () => {
     if (!canSend || running) return
-    const draft = { text, files }
+    const draft = { text, files, skills: selectedSkills, skillKey: catalog.key }
     setText("")
     setFiles([])
+    setSelectedByContext((prev) => ({ ...prev, [draft.skillKey]: [] }))
     setSending(true)
-    const sent = await send(draft.text.trim(), { model, effort, access, persona: persona?.id ?? "", files: draft.files.map((d) => d.file) })
+    const sent = await send(draft.text.trim(), { model, effort, access, persona: persona?.id ?? "", files: draft.files.map((d) => d.file), skills: draft.skills.map((s) => s.id) })
     setSending(false)
     if (sent) release(draft.files)
     else {
       setText(draft.text)
       setFiles(draft.files)
+      setSelectedByContext((prev) => ({ ...prev, [draft.skillKey]: [...draft.skills, ...(prev[draft.skillKey] || []).filter((s) => !draft.skills.some((old) => old.id === s.id))] }))
     }
   }
 
@@ -105,8 +122,9 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
           addFiles(e.dataTransfer.files)
         }}
       >
-        {files.length > 0 && (
+        {(files.length > 0 || selectedSkills.length > 0) && (
           <InputGroupAddon align="block-start" className="flex-wrap text-foreground">
+            {selectedSkills.map((skill) => <Badge key={skill.id} variant="secondary" title={`${skill.origin} · ${skill.path}`} className="h-8 gap-1.5 pr-1 pl-2 text-foreground"><BookOpenIcon /><span className="max-w-48 truncate">{skill.name}</span><InputGroupButton size="icon-xs" className="rounded-full" aria-label={`Remove skill ${skill.name}`} onClick={() => removeSkill(skill.id)}><XIcon /></InputGroupButton></Badge>)}
             {files.map((draft, i) => (
               <FileChip key={`${draft.file.name}-${draft.file.lastModified}-${i}`} draft={draft} onRemove={() => removeFile(i)} />
             ))}
@@ -121,7 +139,11 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
           aria-label="Message"
           placeholder={agent ? `Message ${persona?.name ?? agent.name}…` : "Connect an agent to start chatting"}
           className="max-h-60 min-h-12 px-4 pt-3.5 text-[15px] md:text-[15px]"
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value)
+            const slash = /^\/([\w:-]*)$/.exec(e.target.value)
+            if (slash && agent) { setSkillQuery(slash[1]); setSkillsOpen(true); void catalog.refresh() }
+          }}
           onPaste={(e) => {
             if (!e.clipboardData.files.length) return
             e.preventDefault()
@@ -162,6 +184,7 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
           </DropdownMenu>
 
           <AgentPicker state={state} personas={personas} persona={persona} model={model} effort={effort} access={access} />
+          <SkillPicker skills={catalog.skills} selected={selectedSkills} loading={catalog.loading} error={catalog.error} disabled={!agent} open={active && skillsOpen} onOpenChange={(open) => { setSkillsOpen(open); if (open) { setSkillQuery(""); void catalog.refresh() } }} query={skillQuery} onQueryChange={setSkillQuery} onSelect={selectSkill} onRefresh={catalog.refresh} onClose={() => { if (active) input.current?.focus() }} />
 
           <Tooltip>
             <TooltipTrigger asChild>

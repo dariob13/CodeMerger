@@ -10,7 +10,9 @@ export type Part = TextPart | ToolPart
 // A file the user added to a message. It is stored on disk and agents are pointed at its path.
 export type Attachment = { id: string; name: string; type: string; size: number; path: string }
 
-export type UserMessage = { id: string; role: "user"; text: string; attachments?: Attachment[]; ts: number }
+export type SkillReference = { id: string; name: string; path: string }
+export type AgentSkill = SkillReference & { description: string; scope: "project" | "personal" | "plugin" | "system"; origin: string }
+export type UserMessage = { id: string; role: "user"; text: string; attachments?: Attachment[]; skills?: SkillReference[]; ts: number }
 export type AssistantMessage = {
   id: string
   role: "assistant"

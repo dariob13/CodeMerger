@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CircleAlertIcon, FileIcon } from "lucide-react"
+import { CircleAlertIcon, FileIcon, BookOpenIcon } from "lucide-react"
 import { AgentIcon } from "@/components/agent-icon"
 import { AgentMark } from "@/components/agent-mark"
 import { AgentTimer } from "@/components/agent-timer"
@@ -66,6 +66,7 @@ export const ChatMessage = React.memo(function ChatMessage({ chatId, message, ag
   if (message.role === "user") {
     return (
       <div className="flex flex-col items-end gap-2">
+        {message.skills?.length ? <div className="flex max-w-[82%] flex-wrap justify-end gap-1.5">{message.skills.map((skill) => <Badge key={skill.id} variant="outline" title={skill.path} className="bg-card"><BookOpenIcon data-icon="inline-start" /><span className="max-w-56 truncate">{skill.name}</span></Badge>)}</div> : null}
         {message.attachments?.length ? <Attachments chatId={chatId} files={message.attachments} /> : null}
         {message.text && (
           <div className="max-w-[82%] rounded-2xl bg-secondary px-4 py-2.5 text-[15px] leading-7 wrap-anywhere whitespace-pre-wrap">

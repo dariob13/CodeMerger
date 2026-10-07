@@ -19,7 +19,7 @@ import {
 // What the next message is sent with. Model and effort are remembered per agent.
 // `persona` is one of the user's own agents, or "" to talk to the CLI directly.
 export type Pick = { agent: string; persona: string; access: Access; models: Record<string, string>; efforts: Record<string, string> }
-export type SendOptions = { model: string; effort: string; access: Access; persona: string; files: File[] }
+export type SendOptions = { model: string; effort: string; access: Access; persona: string; files: File[]; skills?: string[] }
 
 // One open tab. A tab without a chat is a new chat that hasn't had its first message yet.
 export type Tab = { key: string; chatId: string | null; projectId: string | null }
