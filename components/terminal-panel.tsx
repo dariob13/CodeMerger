@@ -99,10 +99,7 @@ export function TerminalPanel({ project, branch, open, onOpenChange }: { project
     requestAnimationFrame(() => input.current?.focus())
   }
   const prompt = (
-    <span className="text-muted-foreground">
-      {folder}
-      {branch ? `  [${branch}]` : ""} ${" "}
-    </span>
+    <span className="whitespace-pre text-muted-foreground">{`${folder}${branch ? `  [${branch}]` : ""} $ `}</span>
   )
 
   return (

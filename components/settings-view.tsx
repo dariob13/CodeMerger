@@ -244,6 +244,7 @@ export function SettingsView({ state }: { state: ChatsState }) {
 
           <Section title="Shortcuts">
             <Card>
+              <Row label="Search chats and projects"><Keys keys={[mod, "K"]} /></Row>
               <Row label="New tab"><Keys keys={[mod, "T"]} /></Row>
               <Row label="Show or hide the sidebar"><Keys keys={[mod, "B"]} /></Row>
               <Row label="Open settings"><Keys keys={[mod, ","]} /></Row>
