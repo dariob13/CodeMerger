@@ -8,12 +8,10 @@ import {
   InboxIcon,
   NotebookPenIcon,
   PlusIcon,
-  RefreshCwIcon,
   Trash2Icon,
   WorkflowIcon,
 } from "lucide-react"
 import { AgentIcon } from "@/components/agent-icon"
-import { AccountMenu } from "@/components/account-menu"
 import { AgentMark } from "@/components/agent-mark"
 import {
   AlertDialog,
@@ -27,15 +25,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { ProjectDialog } from "@/components/project-form"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupAction,
   SidebarGroupContent,
@@ -54,46 +47,13 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import type { View } from "@/components/chat-app"
 import type { ChatsState } from "@/hooks/use-chats"
-import { UsageTracker } from "@/components/usage-tracker"
-import type { AgentInfo, AgentUsage, ChatSummary, Project } from "@/lib/types"
-
-function ConnectDialog({ agent, onClose }: { agent: AgentInfo | null; onClose: () => void }) {
-  return (
-    <Dialog open={Boolean(agent)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Connect {agent?.name}</DialogTitle>
-          <DialogDescription>
-            Code Merger uses the {agent?.name} CLI and its own sign-in on this machine. Run {agent?.connected ? "this" : "these"} in a
-            terminal, then press the recheck button next to Agents.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4">
-          {!agent?.connected && (
-            <div className="grid gap-2">
-              <Label htmlFor="agent-install">{agent?.install ? "Install" : "Command not found"}</Label>
-              <Input id="agent-install" readOnly className="font-mono" value={agent?.install || agent?.command || ""} onFocus={(e) => e.target.select()} />
-            </div>
-          )}
-          {agent?.login && (
-            <div className="grid gap-2">
-              <Label htmlFor="agent-login">Sign in</Label>
-              <Input id="agent-login" readOnly className="font-mono" value={agent.login} onFocus={(e) => e.target.select()} />
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
+import type { ChatSummary, Project } from "@/lib/types"
 
 type Props = {
   state: ChatsState
   view: View
   onView: (view: View) => void
   unread: number
-  usage: AgentUsage[]
-  onReloadUsage: () => Promise<void>
 }
 
 const AgentsIcon = () => <AgentMark name="agents" className="mx-px size-3.5" />
@@ -105,18 +65,14 @@ const SECTIONS = [
   { view: "agents", label: "Agents", icon: AgentsIcon },
 ] as const
 
-export function AppSidebar({ state, view, onView, unread, usage, onReloadUsage }: Props) {
-  const { agents, projects, project, chats, chat, newChat, openChat, deleteChat, recheck, selectProject, deleteProject } = state
+export function AppSidebar({ state, view, onView, unread }: Props) {
+  const { agents, projects, project, chats, chat, newChat, openChat, deleteChat, selectProject, deleteProject } = state
   const [creating, setCreating] = React.useState(false)
   const [deletingProject, setDeletingProject] = React.useState<Project | null>(null)
   const { isMobile, setOpenMobile } = useSidebar()
   const [pendingDelete, setPendingDelete] = React.useState<ChatSummary | null>(null)
-  const [connecting, setConnecting] = React.useState<AgentInfo | null>(null)
-  const [checking, setChecking] = React.useState(false)
   const color = (id: string | null) => agents.find((a) => a.id === id)?.color
   const closeOnMobile = () => isMobile && setOpenMobile(false)
-  // Agents without a usage row: not installed, or signed out.
-  const inactive = agents.filter((a) => !usage.some((u) => u.agent === a.id) && (!a.connected || a.auth === "none"))
 
   return (
     <Sidebar>
@@ -244,44 +200,6 @@ export function AppSidebar({ state, view, onView, unread, usage, onReloadUsage }
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-0">
-        <SidebarGroup>
-          <SidebarGroupLabel>Usage</SidebarGroupLabel>
-          <SidebarGroupAction
-            title="Recheck agents and usage"
-            aria-label="Recheck agents and usage"
-            disabled={checking}
-            onClick={async () => {
-              setChecking(true)
-              await Promise.all([recheck(), onReloadUsage()])
-              setChecking(false)
-            }}
-          >
-            {checking ? <Spinner /> : <RefreshCwIcon />}
-          </SidebarGroupAction>
-          <SidebarGroupContent className="grid gap-2">
-            <UsageTracker agents={agents} usage={usage} />
-            {inactive.length > 0 && (
-              <SidebarMenu>
-                {inactive.map((a) => (
-                  <SidebarMenuItem key={a.id}>
-                    <SidebarMenuButton size="sm" className="text-muted-foreground" onClick={() => setConnecting(a)}>
-                      <AgentIcon id={a.id} color={a.connected ? a.color : undefined} className="mx-0.5 size-3" />
-                      <span>{a.name}</span>
-                    </SidebarMenuButton>
-                    <SidebarMenuBadge>
-                      <Badge variant="outline">{a.connected ? "Sign in" : "Connect"}</Badge>
-                    </SidebarMenuBadge>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            )}
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <AccountMenu />
-      </SidebarFooter>
-
-      <ConnectDialog agent={connecting} onClose={() => setConnecting(null)} />
       <ProjectDialog open={creating} root={state.projectsRoot} onCreate={state.createProject} onClose={() => (setCreating(false), onView("chat"))} />
       <ConfirmDialog
         open={Boolean(deletingProject)}

@@ -1,12 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { CheckIcon, ChevronDownIcon, SearchIcon, ShieldAlertIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, RefreshCwIcon, SearchIcon, ShieldAlertIcon } from "lucide-react"
 import { AgentIcon } from "@/components/agent-icon"
 import { AgentMark } from "@/components/agent-mark"
 import { InputGroupButton } from "@/components/ui/input-group"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
+import { Spinner } from "@/components/ui/spinner"
 import type { ChatsState } from "@/hooks/use-chats"
 import type { Access, Persona } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -47,12 +48,33 @@ function Row({ selected, className, children, ...props }: React.ComponentProps<"
   )
 }
 
-const Label = ({ children, count }: { children: React.ReactNode; count?: number }) => (
-  <p className="flex h-7 shrink-0 items-center px-2 text-xs font-medium text-subtle">
-    <span className="flex-1">{children}</span>
-    {count !== undefined && <span className="font-normal tabular-nums">{count}</span>}
-  </p>
+const Label = ({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) => (
+  <div className="flex h-7 shrink-0 items-center pr-1 pl-2 text-xs font-medium text-subtle">
+    <p className="flex-1">{children}</p>
+    {action}
+  </div>
 )
+
+// Looks again for the agent CLIs on this machine, for one installed or signed in since the app started.
+function Recheck({ recheck }: { recheck: () => Promise<unknown> }) {
+  const [checking, setChecking] = React.useState(false)
+  return (
+    <button
+      type="button"
+      title="Recheck agents"
+      aria-label="Recheck agents"
+      disabled={checking}
+      className="grid size-5 place-items-center rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-3"
+      onClick={async () => {
+        setChecking(true)
+        await recheck()
+        setChecking(false)
+      }}
+    >
+      {checking ? <Spinner /> : <RefreshCwIcon aria-hidden />}
+    </button>
+  )
+}
 
 function Models({ options, value, agentName, onChange }: { options: [string, string][]; value: string; agentName: string; onChange: (value: string) => void }) {
   const [query, setQuery] = React.useState("")
@@ -88,7 +110,7 @@ function Models({ options, value, agentName, onChange }: { options: [string, str
 
 // The agent, its model, how hard it thinks and what it may touch, all in one panel.
 export function AgentPicker({ state, personas, persona, model, effort, access }: Props) {
-  const { agents, agent, pick, setPick } = state
+  const { agents, agent, pick, setPick, recheck } = state
   const effortIndex = Math.max(agent?.efforts.findIndex(([v]) => v === effort) ?? 0, 0)
   const labelOf = (options: [string, string][] | undefined, value: string) => (value && options?.find(([v]) => v === value)?.[1]) || ""
   const choices = agent ? [labelOf(agent.models, model), labelOf(agent.efforts, effort), ACCESS[access].label].filter(Boolean).join(" · ") : ""
@@ -130,7 +152,7 @@ export function AgentPicker({ state, personas, persona, model, effort, access }:
                 </div>
               </>
             )}
-            <Label count={agents.length}>{personas.length ? "Coding agents" : "Agent"}</Label>
+            <Label action={<Recheck recheck={recheck} />}>{personas.length ? "Coding agents" : "Agent"}</Label>
             <div role="radiogroup" aria-label="Agent" className="flex flex-col gap-px">
               {agents.map((a) => (
                 <Row key={a.id} selected={!persona && agent?.id === a.id} disabled={!a.connected} onClick={() => setPick({ agent: a.id, persona: "" })}>

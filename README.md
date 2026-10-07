@@ -33,7 +33,6 @@ The repository and the app currently retain the CodeMerger name while the boals 
 | **Bring files into the conversation** | Attach, paste, or drop files and images into a message. |
 | **Keep work moving** | Save notes, schedule automations, and collect run results in the inbox. |
 | **Create your own agents** | Define standing duties and memories that carry into future turns. |
-| **Watch your usage** | See reported limits and reset times, with reply counts when limits are unavailable. |
 
 ## Get started
 
@@ -60,7 +59,7 @@ The development server uses the same address with hot reload.
 
 ### Your CLIs, one conversation
 
-Agents are detected on your `PATH` and use the accounts already signed in through their CLIs. The agent menu shows installation and sign-in status. Use the recheck button in the sidebar after installing or signing in.
+Agents are detected on your `PATH` and use the accounts already signed in through their CLIs. The agent menu shows installation and sign-in status. Use the recheck button in the agent menu after installing or signing in.
 
 Each agent keeps its own CLI session. When you switch, the next agent receives the conversation turns it missed. The composer lets you choose the agent, model, effort level, and supported permissions for the next turn.
 
@@ -76,13 +75,7 @@ The server listens on `127.0.0.1`; `proxy.ts` rejects requests originating from 
 
 Notes save as you type. Automations run on demand, at a daily time, or on an interval; each run creates a chat and sends its result to the inbox. Scheduled work runs while the app is running, and missed runs are skipped.
 
-Custom agents can keep standing duties and memories across turns. Usage indicators show the limits reported by each CLI, or a reply count when no limit information is available.
-
-### Account flow preview
-
-The bottom-left account circle opens login and signup dialogs with Google, GitHub, and email/password options. This is currently a **frontend preview**: provider sign-in is simulated, passwords are not stored, and profiles persist only in the current browser. Real authentication and cross-device synchronization are not connected yet.
-
-See [the authentication preview notes](docs/auth-preview.md) for the current behavior.
+Custom agents can keep standing duties and memories across turns.
 
 ## Inside the repo
 

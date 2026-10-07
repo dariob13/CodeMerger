@@ -21,7 +21,6 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { useChats } from "@/hooks/use-chats"
 import { useInbox } from "@/hooks/use-inbox"
 import { usePersonas } from "@/hooks/use-personas"
-import { useUsage } from "@/hooks/use-usage"
 import { useWorkspace } from "@/hooks/use-workspace"
 
 export type View = "chat" | "inbox" | "notes" | "automations" | "agents"
@@ -33,7 +32,6 @@ export function ChatApp() {
   const { chat, agents, project, projects, reloadChats } = state
   const inbox = useInbox(reloadChats) // a new inbox item means an automation made a new chat
   const replies = state.runningTabs.length
-  const { usage, reload: reloadUsage } = useUsage(replies) // limits move when a reply finishes
   const personas = usePersonas(replies) // a reply finishing may have added to an agent's memory
   const [view, setView] = React.useState<View>("chat")
   const chatTitle = !project ? "New project" : chat?.title || "New chat"
@@ -78,7 +76,7 @@ export function ChatApp() {
 
   return (
     <SidebarProvider className="h-svh" style={{ "--agent": state.agent?.color } as React.CSSProperties}>
-      <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} usage={usage} onReloadUsage={reloadUsage} />
+      <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} />
       <SidebarInset className="h-svh min-w-0 flex-row overflow-hidden bg-transparent">
         {view === "chat" && project && <WorkspacePanel key={project.id} state={state} workspace={workspace} />}
         <div className="flex min-w-0 flex-1 flex-col">
