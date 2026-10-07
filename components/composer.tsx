@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ArrowUpIcon, BookOpenIcon, FileIcon, ImageIcon, PaperclipIcon, PlusIcon, SquareIcon, XIcon } from "lucide-react"
+import { ArrowUpIcon, BookOpenIcon, FileIcon, GitBranchIcon, ImageIcon, PaperclipIcon, PlusIcon, SquareIcon, XIcon } from "lucide-react"
 import { toast } from "sonner"
 import { AgentPicker } from "@/components/agent-picker"
 import { SkillPicker } from "@/components/skill-picker"
@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSettings } from "@/hooks/use-settings"
+import { cn } from "@/lib/utils"
 import type { ChatsState } from "@/hooks/use-chats"
 import { useSkills } from "@/hooks/use-skills"
 import { isImage, type Access, type AgentSkill, type Persona } from "@/lib/types"
@@ -42,7 +43,7 @@ function FileChip({ draft: { file, preview }, onRemove }: { draft: Draft; onRemo
 
 // `active` is false for the composers of the tabs in the background, which keep their drafts.
 // `persona` is set in the chat with one of the user's own agents: it answers there, on the CLI it runs on.
-export function Composer({ state, persona, active }: { state: ChatsState; persona?: Persona; active: boolean }) {
+export function Composer({ state, persona, active, branch }: { state: ChatsState; persona?: Persona; active: boolean; branch?: string }) {
   const { pick, running, send, stop } = state
   const agent = persona ? (state.connected.find((a) => a.id === persona.agent) ?? null) : state.agent
   const [text, setText] = React.useState("")
@@ -116,7 +117,7 @@ export function Composer({ state, persona, active }: { state: ChatsState; person
 
       <InputGroup
         // A raised surface whose edge brightens while typing.
-        className="rounded-2xl bg-card p-1 transition-colors has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:bg-card"
+        className="rounded-[14px] bg-card p-1 transition-colors has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:bg-card"
         onDragOver={(e) => e.dataTransfer.types.includes("Files") && e.preventDefault()}
         onDrop={(e) => {
           if (!e.dataTransfer.files.length) return
@@ -133,6 +134,13 @@ export function Composer({ state, persona, active }: { state: ChatsState; person
           </InputGroupAddon>
         )}
 
+        {branch && (
+          <InputGroupAddon align="block-start" className="gap-1.5 px-3.5 pt-2.5 pb-0 font-code text-xs font-normal text-subtle">
+            <GitBranchIcon className="size-3!" aria-hidden />
+            {branch}
+          </InputGroupAddon>
+        )}
+
         <InputGroupTextarea
           ref={input}
           value={text}
@@ -140,7 +148,7 @@ export function Composer({ state, persona, active }: { state: ChatsState; person
           readOnly={!agent}
           aria-label="Message"
           placeholder={agent ? `Message ${persona?.name ?? agent.name}…` : persona ? `The agent ${persona.name} runs on is not connected` : "Connect an agent to start chatting"}
-          className="max-h-60 min-h-12 px-4 pt-3.5 text-[15px] md:text-[15px]"
+          className={cn("max-h-60 min-h-12 px-3.5 text-[15px] leading-[22px] md:text-[15px]", branch ? "pt-2" : "pt-3.5")}
           onChange={(e) => {
             setText(e.target.value)
             const slash = /^\/([\w:-]*)$/.exec(e.target.value)
@@ -164,7 +172,7 @@ export function Composer({ state, persona, active }: { state: ChatsState; person
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
-                  <InputGroupButton variant="outline" size="icon-sm" className="bg-transparent" aria-label="Add files or photos">
+                  <InputGroupButton variant="outline" size="icon-sm" className="h-[30px] w-[34px] rounded-[10px] bg-secondary dark:bg-secondary" aria-label="Add files or photos">
                     <PlusIcon />
                   </InputGroupButton>
                 </DropdownMenuTrigger>
@@ -191,7 +199,7 @@ export function Composer({ state, persona, active }: { state: ChatsState; person
           <Tooltip>
             <TooltipTrigger asChild>
               {running ? (
-                <InputGroupButton variant="default" size="icon-sm" className="ml-auto" aria-label="Stop" onClick={stop}>
+                <InputGroupButton variant="default" size="icon-sm" className="ml-auto h-[30px] rounded-[10px]" aria-label="Stop" onClick={stop}>
                   <SquareIcon className="fill-current" />
                 </InputGroupButton>
               ) : (
@@ -201,7 +209,7 @@ export function Composer({ state, persona, active }: { state: ChatsState; person
                   aria-label="Send"
                   // aria-disabled, because a disabled control would dim the whole input group
                   aria-disabled={!canSend}
-                  className="ml-auto aria-disabled:cursor-default aria-disabled:opacity-40"
+                  className="ml-auto h-[30px] rounded-[10px] aria-disabled:cursor-default aria-disabled:opacity-40"
                   onClick={submit}
                 >
                   <ArrowUpIcon />

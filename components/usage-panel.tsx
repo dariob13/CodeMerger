@@ -37,11 +37,11 @@ export function UsagePanel({ agent, usage, onReload }: Props) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent">
+        <SidebarMenuButton className="h-[34px] gap-2.5 rounded-[10px] px-2.5 text-muted-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-foreground">
           <GaugeIcon />
-          <span>Usage</span>
+          <span className="flex-1">Usage</span>
           {windows.length > 0 && (
-            <span className={`ml-auto text-xs tabular-nums ${left(windows[0]) <= LOW ? "text-destructive" : "text-subtle"}`}>{left(windows[0])}% left</span>
+            <span className={`text-xs tabular-nums ${left(windows[0]) <= LOW ? "text-destructive" : "text-subtle"}`}>{left(windows[0])}% left</span>
           )}
         </SidebarMenuButton>
       </PopoverTrigger>

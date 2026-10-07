@@ -17,7 +17,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { InboxView } from "@/components/inbox-view"
 import { NotesView } from "@/components/notes-view"
+import { SearchDialog } from "@/components/search-dialog"
 import { SettingsView } from "@/components/settings-view"
+import { TerminalPanel } from "@/components/terminal-panel"
 import { TabStrip } from "@/components/tab-strip"
 import { WorkspacePanel } from "@/components/workspace-panel"
 import { WorkspaceEditor } from "@/components/workspace-editor"
@@ -69,6 +71,8 @@ export function ChatApp() {
   const personas = usePersonas(replies) // a reply finishing may have added to an agent's memory
   const [view, setView] = React.useState<View>("chat")
   const [editing, setEditing] = React.useState<Persona | "new" | null>(null)
+  const [searching, setSearching] = React.useState(false)
+  const [terminalOpen, setTerminalOpen] = React.useState(false)
   // The chat with one of the user's own agents takes the place of the workspace and the tab strip.
   const persona = view === "chat" && project ? personas.personas.find((p) => p.id === state.activeTab.personaId) : undefined
   const engine = persona ? agents.find((a) => a.id === persona.agent) : state.agent
@@ -101,6 +105,7 @@ export function ChatApp() {
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "," && (e.metaKey || e.ctrlKey)) return e.preventDefault(), setView("settings")
+      if (e.code === "KeyK" && !e.shiftKey && !e.altKey && (e.metaKey || e.ctrlKey)) return e.preventDefault(), setSearching(true)
       if (e.code !== "KeyT" || e.shiftKey || !(e.metaKey || e.ctrlKey || e.altKey)) return
       e.preventDefault()
       newChat()
@@ -136,12 +141,16 @@ export function ChatApp() {
 
   return (
     <SidebarProvider className="app-layout h-svh" style={{ "--agent": engine?.color, "--desktop-panel-reserve": `${240 + (workspaceShown ? 220 : 0) + (workspaceShown && workspace.activeDocument ? 240 : 0) + (persona ? 240 : 0)}px` } as React.CSSProperties}>
-      <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} personas={personas.personas} onNewAgent={() => setEditing("new")} usageAgent={engine} usage={usage.find((u) => u.agent === engine?.id)} onReloadUsage={reloadUsage} />
+      <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} personas={personas.personas} onNewAgent={() => setEditing("new")} onSearch={() => setSearching(true)} usageAgent={engine} usage={usage.find((u) => u.agent === engine?.id)} onReloadUsage={reloadUsage} />
       <SidebarInset className="h-svh min-w-0 flex-row overflow-hidden bg-transparent">
         {workspaceShown && <WorkspacePanel key={project.id} state={state} workspace={workspace} />}
+        {/* The terminal runs under the chat and the editor together. */}
+        <div className="flex min-w-0 flex-1 flex-col" style={{ "--terminal-height": workspaceShown ? (terminalOpen ? "13.25rem" : "2.25rem") : "0px" } as React.CSSProperties}>
+        <div className="flex min-h-0 flex-1">
         <div data-resize-center className="flex min-w-0 flex-1 flex-col lg:min-w-60">
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-            <SidebarTrigger />
+          <header className={workspaceShown ? "flex h-12 shrink-0 items-center gap-1 border-b px-2.5" : "flex h-12 shrink-0 items-center gap-2 border-b px-3"}>
+            {/* Beside the workspace the tabs take the whole bar; the sidebar still folds with its shortcut. */}
+            <SidebarTrigger className={workspaceShown ? "lg:hidden" : undefined} />
             {workspaceShown && <WorkspaceDrawer key={project.id} state={state} workspace={workspace} />}
             {workspaceShown ? (
               <>
@@ -160,7 +169,7 @@ export function ChatApp() {
             ) : (
               <h1 className="min-w-0 flex-1 truncate text-sm font-medium tracking-tight">{title}</h1>
             )}
-            {view === "chat" && project && (
+            {view === "chat" && project && !workspaceShown && (
               <Badge
                 variant="outline"
                 className="hidden h-7 max-w-[30%] gap-1.5 bg-card px-2.5 font-normal text-muted-foreground md:flex"
@@ -229,7 +238,7 @@ export function ChatApp() {
           <div className={view === "chat" && project ? "flex min-h-0 flex-1" : "hidden"}>
             <div data-resize-center className="flex min-w-0 flex-1 flex-col lg:min-w-60">
               <ScrollArea className="min-h-0 flex-1">
-                <div data-chat-messages className="mx-auto flex min-h-[calc(100svh-9.75rem)] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
+                <div data-chat-messages className="mx-auto flex min-h-[calc(100svh-9.75rem-var(--terminal-height))] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
                   {messages?.length ? (
                     messages.map((m, i) => (
                       <ChatMessage
@@ -288,7 +297,7 @@ export function ChatApp() {
                     </div>
                   )}
                   {state.tabs.map((tab) => (
-                    <Composer key={tab.key} state={state} persona={personas.personas.find((p) => p.id === tab.personaId)} active={tab.key === state.activeTab.key} />
+                    <Composer key={tab.key} branch={workspaceShown ? workspace.data?.git.branch : undefined} state={state} persona={personas.personas.find((p) => p.id === tab.personaId)} active={tab.key === state.activeTab.key} />
                   ))}
                   {context && (
                     <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto w-full max-w-3xl">
@@ -309,6 +318,10 @@ export function ChatApp() {
           </div>
         </div>
         {workspaceShown && workspace.activeDocument && <WorkspaceEditor workspace={workspace} />}
+        </div>
+        {workspaceShown && <TerminalPanel key={project.id} project={project} branch={workspace.data?.git.branch} open={terminalOpen} onOpenChange={setTerminalOpen} />}
+        </div>
+        <SearchDialog state={state} open={searching} onOpenChange={setSearching} onPicked={() => setView("chat")} />
         <AgentDialog editing={editing} agents={agents} personas={personas} onClose={() => setEditing(null)} />
       </SidebarInset>
     </SidebarProvider>

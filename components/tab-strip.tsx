@@ -35,8 +35,8 @@ export function TabStrip({ state }: { state: ChatsState }) {
               key={tab.key}
               ref={active ? current : undefined}
               className={cn(
-                "group/tab flex h-8 max-w-52 min-w-28 shrink-0 items-center rounded-[10px] text-sm text-muted-foreground hover:bg-accent/60",
-                active && "bg-accent font-medium text-foreground hover:bg-accent"
+                "group/tab flex h-8 max-w-64 min-w-28 shrink-0 items-center rounded-[10px] text-[13px] tracking-[-0.6px] text-subtle hover:bg-muted/60",
+                active && "bg-muted font-medium text-foreground hover:bg-muted"
               )}
               // Middle click closes, as in a browser.
               onAuxClick={(e) => e.button === 1 && closeTab(tab.key)}
@@ -46,13 +46,13 @@ export function TabStrip({ state }: { state: ChatsState }) {
                 role="tab"
                 aria-selected={active}
                 title={[projectName, title].filter(Boolean).join(" › ")}
-                className="flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-[10px] pr-1 pl-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-[10px] pr-1.5 pl-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => selectTab(tab.key)}
               >
                 {runningTabs.includes(tab.key) ? (
-                  <Spinner className="size-3 shrink-0" aria-label="Replying" />
+                  <Spinner className="size-[13px] shrink-0" aria-label="Replying" />
                 ) : (
-                  <AgentIcon id={agent?.id} color={agent?.color} className="size-3" />
+                  <AgentIcon id={agent?.id} color={agent?.color} className="size-[13px]" />
                 )}
                 <span className="truncate">
                   {mixed && projectName && <span className="font-normal text-subtle">{projectName} · </span>}
@@ -63,7 +63,7 @@ export function TabStrip({ state }: { state: ChatsState }) {
                 variant="ghost"
                 size="icon-xs"
                 aria-label={`Close tab ${title}`}
-                className={cn("mr-1 shrink-0 opacity-0 group-hover/tab:opacity-100 focus-visible:opacity-100", active && "opacity-100")}
+                className={cn("mr-1.5 size-5 shrink-0 text-subtle opacity-0 group-hover/tab:opacity-100 focus-visible:opacity-100 [&_svg]:size-3", active && "opacity-100", !active && "-ml-6")}
                 onClick={() => closeTab(tab.key)}
               >
                 <XIcon />
@@ -74,7 +74,7 @@ export function TabStrip({ state }: { state: ChatsState }) {
       </div>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon-sm" className="shrink-0" aria-label="New tab" onClick={newChat}>
+          <Button variant="ghost" size="icon-sm" className="shrink-0 lg:hidden" aria-label="New tab" onClick={newChat}>
             <PlusIcon />
           </Button>
         </TooltipTrigger>

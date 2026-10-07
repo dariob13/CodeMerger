@@ -1,19 +1,10 @@
 "use client"
 
 import * as React from "react"
-import {
-  FolderIcon,
-  FolderOpenIcon,
-  GitMergeIcon,
-  InboxIcon,
-  NotebookPenIcon,
-  PlusIcon,
-  SettingsIcon,
-  Trash2Icon,
-  WorkflowIcon,
-} from "lucide-react"
+import { Clock3Icon, FileTextIcon, InboxIcon, PlusIcon, SearchIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react"
 import { AgentIcon } from "@/components/agent-icon"
 import { AgentMark } from "@/components/agent-mark"
+import { BoalsFace, BoalsWordmark } from "@/components/boals"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +41,8 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import type { View } from "@/components/chat-app"
 import type { ChatsState } from "@/hooks/use-chats"
+import { useModKey } from "@/hooks/use-mod-key"
+import { cn } from "@/lib/utils"
 import type { AgentInfo, AgentUsage, ChatSummary, Persona, Project } from "@/lib/types"
 
 type Props = {
@@ -59,6 +52,7 @@ type Props = {
   unread: number
   personas: Persona[]
   onNewAgent: () => void
+  onSearch: () => void
   // The selected agent and its limits, for the Usage row.
   usageAgent: AgentInfo | undefined
   usage: AgentUsage | undefined
@@ -67,11 +61,14 @@ type Props = {
 
 const SECTIONS = [
   { view: "inbox", label: "Inbox", icon: InboxIcon },
-  { view: "notes", label: "Notes", icon: NotebookPenIcon },
-  { view: "automations", label: "Automations", icon: WorkflowIcon },
+  { view: "notes", label: "Notes", icon: FileTextIcon },
+  { view: "automations", label: "Automations", icon: Clock3Icon },
 ] as const
 
-export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, usageAgent, usage, onReloadUsage }: Props) {
+// One row of the sidebar, as drawn in the Figma file: 34px tall, 10px corners, a 16px mark.
+export const SIDEBAR_ROW = "h-[34px] gap-2.5 rounded-[10px] px-2.5 text-muted-foreground data-active:text-foreground"
+
+export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, onSearch, usageAgent, usage, onReloadUsage }: Props) {
   const { agents, projects, project, chats, chat, newChat, openChat, deleteChat, selectProject, deleteProject } = state
   const withAgent = view === "chat" ? state.activeTab.personaId : undefined // the agent whose chat is being looked at
   const [creating, setCreating] = React.useState(false)
@@ -80,46 +77,38 @@ export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, 
   const [pendingDelete, setPendingDelete] = React.useState<ChatSummary | null>(null)
   const color = (id: string | null) => agents.find((a) => a.id === id)?.color
   const closeOnMobile = () => isMobile && setOpenMobile(false)
+  const mod = useModKey()
 
   return (
     <Sidebar>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <div className="flex h-9 items-center gap-2 px-2 text-[15px] font-medium tracking-tight" aria-label="Code Merger">
-              <GitMergeIcon className="size-[18px]" aria-hidden />
-              <span aria-hidden>
-                code<span className="font-normal text-muted-foreground">merger</span>
-                <span className="font-normal text-subtle">.</span>
-              </span>
-            </div>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              variant="outline"
-              onClick={() => {
-                // Chats live in a project, so the first step without one is creating it.
-                if (!project) return setCreating(true)
-                newChat()
-                onView("chat")
-                closeOnMobile()
-              }}
-            >
-              <PlusIcon />
-              New chat
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarHeader className="gap-2 px-2.5 pt-3 pb-1">
+        <div role="img" aria-label="boals" className="flex h-9 items-center gap-[7px] px-2">
+          <BoalsFace />
+          <BoalsWordmark />
+        </div>
+        <button
+          type="button"
+          className="flex h-[34px] items-center gap-2 rounded-[10px] border bg-card pr-2 pl-2.5 text-sm text-subtle outline-none hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+          onClick={() => {
+            onSearch()
+            closeOnMobile()
+          }}
+        >
+          <SearchIcon className="size-[15px]" aria-hidden />
+          <span className="flex-1 text-left">Search</span>
+          <kbd className="rounded-md border bg-muted px-1.5 py-0.5 font-sans text-[11px] font-medium text-muted-foreground">{mod} K</kbd>
+        </button>
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
+        <SidebarGroup className="px-2.5 py-1">
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               {SECTIONS.map((section) => (
                 <SidebarMenuItem key={section.view}>
                   <SidebarMenuButton
                     isActive={view === section.view}
+                    className={SIDEBAR_ROW}
                     onClick={() => {
                       onView(section.view)
                       closeOnMobile()
@@ -129,7 +118,7 @@ export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, 
                     <span>{section.label}</span>
                   </SidebarMenuButton>
                   {section.view === "inbox" && unread > 0 && (
-                    <SidebarMenuBadge aria-label={`${unread} unread`}>{unread > 99 ? "99+" : unread}</SidebarMenuBadge>
+                    <SidebarMenuBadge className="top-[7px]! right-2 font-normal text-subtle" aria-label={`${unread} unread`}>{unread > 99 ? "99+" : unread}</SidebarMenuBadge>
                   )}
                 </SidebarMenuItem>
               ))}
@@ -137,18 +126,19 @@ export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, 
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Agents</SidebarGroupLabel>
-          <SidebarGroupAction title="New agent" aria-label="New agent" onClick={onNewAgent}>
+        <SidebarGroup className="px-2.5 py-0">
+          <SidebarGroupLabel className="h-9 items-end px-2.5 pb-1.5 text-[13px] text-subtle">Agents</SidebarGroupLabel>
+          <SidebarGroupAction className="top-2.5 right-4 text-muted-foreground" title="New agent" aria-label="New agent" onClick={onNewAgent}>
             <PlusIcon />
           </SidebarGroupAction>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {!personas.length && <p className="px-2 py-1 text-sm text-muted-foreground">No agents yet</p>}
+            <SidebarMenu className="gap-0.5">
+              {!personas.length && <p className="px-2.5 py-1.5 text-sm text-subtle">No agents yet</p>}
               {personas.map((p) => (
                 <SidebarMenuItem key={p.id}>
                   <SidebarMenuButton
                     isActive={withAgent === p.id}
+                    className={SIDEBAR_ROW}
                     title={project ? `Chat with ${p.name} in ${project.name}` : undefined}
                     onClick={() => {
                       // An agent works in a project's folder, so the first step without one is creating it.
@@ -158,7 +148,7 @@ export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, 
                       closeOnMobile()
                     }}
                   >
-                    <AgentMark name={p.name} active={chats.some((c) => c.personaId === p.id && c.running)} className="mx-px size-3.5" />
+                    <AgentMark name={p.name} active={chats.some((c) => c.personaId === p.id && c.running)} className="mx-px size-3.5!" />
                     <span>{p.name}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -167,15 +157,15 @@ export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, 
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Projects</SidebarGroupLabel>
-          <SidebarGroupAction title="New project" aria-label="New project" onClick={() => setCreating(true)}>
+        <SidebarGroup className="px-2.5 py-0">
+          <SidebarGroupLabel className="h-9 items-end px-2.5 pb-1.5 text-[13px] text-subtle">Projects</SidebarGroupLabel>
+          <SidebarGroupAction className="top-2.5 right-4 text-muted-foreground" title="New project" aria-label="New project" onClick={() => setCreating(true)}>
             <PlusIcon />
           </SidebarGroupAction>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {!projects.length && <p className="px-2 py-1 text-sm text-muted-foreground">No projects yet</p>}
-              {projects.map((p) => {
+            <SidebarMenu className="gap-0.5">
+              {!projects.length && <p className="px-2.5 py-1.5 text-sm text-subtle">No projects yet</p>}
+              {projects.map((p, index) => {
                 const open = p.id === project?.id
                 const own = chats.filter((c) => c.projectId === p.id && !c.personaId)
                 return (
@@ -184,17 +174,20 @@ export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, 
                       isActive={view === "chat" && open && !chat && !withAgent}
                       title={p.cwd}
                       // On wide screens the chats sit in the workspace column, so the open project is the selection here.
-                      className={view === "chat" && open && !withAgent ? "lg:bg-sidebar-accent lg:font-medium" : undefined}
+                      className={cn(SIDEBAR_ROW, view === "chat" && open && !withAgent && "lg:bg-sidebar-accent lg:font-medium lg:text-foreground")}
                       onClick={() => {
                         selectProject(p.id)
                         onView("chat")
                         closeOnMobile()
                       }}
                     >
-                      {open ? <FolderOpenIcon /> : <FolderIcon />}
+                      {/* Each project's tile is a step fainter than the one above; the open one is solid. */}
+                      <span aria-hidden className="grid size-4 shrink-0 place-items-center">
+                        <span className="size-3 rounded-[4.5px] bg-foreground" style={{ opacity: open ? 1 : Math.max(0.2, 0.55 - index * 0.05) }} />
+                      </span>
                       <span>{p.name}</span>
                     </SidebarMenuButton>
-                    <SidebarMenuAction showOnHover aria-label={`Delete project ${p.name}`} onClick={() => setDeletingProject(p)}>
+                    <SidebarMenuAction showOnHover className="top-[7px]! right-1.5" aria-label={`Delete project ${p.name}`} onClick={() => setDeletingProject(p)}>
                       <Trash2Icon />
                     </SidebarMenuAction>
                     {open && (
@@ -237,21 +230,23 @@ export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, 
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
-        <SidebarMenu>
+      <SidebarFooter className="px-2.5 pb-2.5">
+        <SidebarMenu className="gap-1">
           <SidebarMenuItem>
             <UsagePanel agent={usageAgent} usage={usage} onReload={onReloadUsage} />
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={view === "settings"}
+              className={SIDEBAR_ROW}
               onClick={() => {
                 onView("settings")
                 closeOnMobile()
               }}
             >
-              <SettingsIcon />
-              <span>Settings</span>
+              <SlidersHorizontalIcon />
+              <span className="flex-1">Settings</span>
+              <span className="text-xs text-subtle">{mod} ,</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

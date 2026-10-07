@@ -114,18 +114,34 @@ export function AgentPicker({ state, agent, locked, model, effort, access }: Pro
   const labelOf = (options: [string, string][] | undefined, value: string) => (value && options?.find(([v]) => v === value)?.[1]) || ""
   const choices = agent ? [labelOf(agent.models, model), labelOf(agent.efforts, effort), ACCESS[access].label].filter(Boolean).join(" · ") : ""
   const name = agent ? agent.short : "No agent"
+  const [open, setOpen] = React.useState(false)
+  const wasOpen = React.useRef(false) // the press that lands on the second button also dismisses the panel
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <InputGroupButton variant="ghost" size="sm" className="min-w-0 shrink" aria-label={`Agent, model, effort and access: ${name}${choices && `, ${choices}`}`}>
-          {agent && <AgentIcon id={agent.id} color={agent.color} />}
+        <InputGroupButton variant="outline" size="sm" className="h-[30px] min-w-0 gap-1.5 rounded-[10px] bg-secondary px-2.5 text-[13px] tracking-[-0.6px] dark:bg-secondary shrink-0" aria-label={`Agent, model, effort and access: ${name}${choices && `, ${choices}`}`}>
+          {agent && <AgentIcon id={agent.id} color={agent.color} className="size-[13px]" />}
           <span className="shrink-0">{name}</span>
-          <span className="truncate font-normal text-muted-foreground">{choices}</span>
           {access === "full" && <ShieldAlertIcon className="text-destructive" aria-label="Full access" />}
-          <ChevronDownIcon className="text-muted-foreground" />
+          <ChevronDownIcon className="size-3! text-muted-foreground" />
         </InputGroupButton>
       </PopoverTrigger>
+      {/* The choices made in the panel, on a button of their own that opens the same panel. */}
+      {choices && (
+        <InputGroupButton
+          variant="outline"
+          size="sm"
+          tabIndex={-1}
+          aria-hidden
+          className="h-[30px] min-w-0 gap-1.5 rounded-[10px] bg-secondary px-2.5 text-[13px] tracking-[-0.6px] dark:bg-secondary hidden shrink font-normal text-muted-foreground sm:flex"
+          onPointerDown={() => (wasOpen.current = open)}
+          onClick={() => setOpen(!wasOpen.current)}
+        >
+          <span className="truncate">{choices}</span>
+          <ChevronDownIcon className="size-3! shrink-0" />
+        </InputGroupButton>
+      )}
       <PopoverContent align="start" side="top" sideOffset={8} className="w-[400px] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-xl p-0">
         <div className="flex">
           {!locked && (

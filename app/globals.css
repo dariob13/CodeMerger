@@ -77,8 +77,8 @@
   --card-foreground: #181818;
   --popover: #ffffff;
   --popover-foreground: #181818;
-  --primary: #1d1d1d;
-  --primary-foreground: #f8f8f8;
+  --primary: #171717; /* boals ink */
+  --primary-foreground: #faf7ef; /* boals milk */
   --secondary: #ededed;
   --secondary-foreground: #181818;
   --muted: #f0f0f0;
@@ -107,6 +107,8 @@
   --subtle: #6e6e6e; /* tertiary text: timestamps, counts, placeholders */
   --button-edge: inset 0 1px 0 #ffffff1f, 0 1px 2px #00000014;
   --agent: #8a8a8a; /* the selected agent's colour, set by the app */
+  --boals-body: #171717; /* the face and wordmark: ink on light, milk on dark */
+  --boals-eyes: #faf7ef;
 
   /* The glass theme's variables, kept so its class names resolve to flat surfaces. */
   --glass: var(--card);
@@ -114,14 +116,16 @@
 }
 
 .dark {
+  --boals-body: #faf7ef;
+  --boals-eyes: #171717;
   --background: #121212;
   --foreground: #eeeeee;
   --card: #171717;
   --card-foreground: #eeeeee;
   --popover: #1c1c1c;
   --popover-foreground: #eeeeee;
-  --primary: #e8e8e8;
-  --primary-foreground: #141414;
+  --primary: #faf7ef;
+  --primary-foreground: #171717;
   --secondary: #1f1f1f;
   --secondary-foreground: #eeeeee;
   --muted: #1c1c1c;
@@ -284,4 +288,31 @@ body:has([data-resizing]) * { cursor: col-resize !important; }
   animation-iteration-count: 1 !important;
   transition-duration: 0s !important;
   scroll-behavior: auto !important;
+}
+
+/* Code in the editor, the terminal and the composer's branch line is set in the workspace's mono. */
+@utility font-code {
+  font-family: var(--font-workspace-mono), monospace;
+}
+.terminal-panel { --subtle: #6e6e6e; }
+.dark .terminal-panel { --subtle: #7a7a7a; }
+.terminal-panel .font-mono { font-family: var(--font-workspace-mono), monospace; }
+
+/*
+  The boals face (Figma 64:118). While an agent works the eyes look ahead, then glance up, and the face lifts 2px with the glance.
+  Without motion the glance is shown still, which is also what these rules rest on between loops.
+*/
+.boals-face[data-face="working"] { animation: boals-pop 0.3s ease-out, boals-bob 1.6s ease-in-out 0.3s infinite; }
+.boals-face[data-face="done"] { animation: boals-pop 0.3s ease-out; }
+.boals-eyes-ahead { opacity: 0; animation: boals-ahead 1.6s step-end infinite; }
+.boals-eyes-up { animation: boals-up 1.6s step-end infinite; }
+@keyframes boals-pop { from { transform: scale(0.8); } }
+@keyframes boals-bob {
+  0%, 32%, 100% { transform: translateY(0); }
+  40%, 92% { transform: translateY(-2px); }
+}
+@keyframes boals-ahead { 0% { opacity: 1; } 37.5% { opacity: 0; } }
+@keyframes boals-up { 0% { opacity: 0; } 37.5% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .boals-face, .boals-eyes-ahead, .boals-eyes-up { animation: none; }
 }
