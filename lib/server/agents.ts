@@ -150,6 +150,38 @@ async function codexUsage(sessionId?: string): Promise<UsageReport | null> {
   }
 }
 
+// Codex keeps the models the signed-in account can use in ~/.codex/models_cache.json and refreshes it itself.
+// Read again whenever the file changes; the fixed list covers a machine where Codex hasn't written it yet.
+const CODEX_MODELS: [string, string][] = [
+  ["gpt-6.1-sol", "GPT-6.1-Sol"],
+  ["gpt-6-astra", "GPT-6-Astra"],
+  ["gpt-6-sol", "GPT-6-Sol"],
+  ["gpt-6-luna", "GPT-6-Luna"],
+  ["gpt-5.6-sol", "GPT-5.6-Sol"],
+  ["gpt-5.6-terra", "GPT-5.6-Terra"],
+  ["gpt-5.6-luna", "GPT-5.6-Luna"],
+  ["gpt-5.5", "GPT-5.5"],
+]
+let codexModelCache: { modified: number; models: [string, string][] } | null = null
+
+function codexModels(): [string, string][] {
+  const file = path.join(process.env.CODEX_HOME || path.join(os.homedir(), ".codex"), "models_cache.json")
+  try {
+    const modified = fs.statSync(file).mtimeMs
+    if (codexModelCache?.modified !== modified) {
+      const listed: { slug?: unknown; display_name?: unknown; visibility?: unknown; priority?: unknown }[] = JSON.parse(fs.readFileSync(file, "utf8")).models
+      const models = listed
+        .filter((m) => typeof m.slug === "string" && m.visibility === "list")
+        .sort((a, b) => Number(a.priority) - Number(b.priority))
+        .map((m): [string, string] => [m.slug as string, typeof m.display_name === "string" ? m.display_name : (m.slug as string)])
+      codexModelCache = { modified, models: models.length ? models : CODEX_MODELS }
+    }
+    return codexModelCache.models
+  } catch {
+    return CODEX_MODELS
+  }
+}
+
 const claude: Agent = {
   id: "claude",
   name: "Claude Code",
@@ -159,7 +191,22 @@ const claude: Agent = {
   color: "#d97757",
   install: "npm install -g @anthropic-ai/claude-code",
   login: "claude  (then /login)",
-  models: [["", "Default model"], ["opus", "Opus"], ["sonnet", "Sonnet"], ["haiku", "Haiku"]],
+  models: [
+    ["", "Default model"],
+    ["claude-fable-5-1", "Fable 5.1"],
+    ["claude-fable-5", "Fable 5"],
+    ["claude-opus-5-5", "Opus 5.5"],
+    ["claude-opus-5", "Opus 5"],
+    ["claude-opus-4-8", "Opus 4.8"],
+    ["claude-opus-4-7", "Opus 4.7"],
+    ["claude-opus-4-6", "Opus 4.6"],
+    ["claude-opus-4-5", "Opus 4.5"],
+    ["claude-sonnet-5-5", "Sonnet 5.5"],
+    ["claude-sonnet-5", "Sonnet 5"],
+    ["claude-sonnet-4-6", "Sonnet 4.6"],
+    ["claude-sonnet-4-5", "Sonnet 4.5"],
+    ["claude-haiku-4-5", "Haiku 4.5"],
+  ],
   efforts: [["", "Default effort"], ["low", "Low"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra high"], ["max", "Max"]],
   access: ["read", "edit", "full"],
   auth: {
@@ -238,7 +285,9 @@ const codex: Agent = {
   color: "#10a37f",
   install: "npm install -g @openai/codex",
   login: "codex login",
-  models: [["", "Default model"]],
+  get models(): [string, string][] {
+    return [["", "Default model"], ...codexModels()]
+  },
   efforts: [["", "Default effort"], ["low", "Low"], ["medium", "Medium"], ["high", "High"]],
   access: ["read", "edit", "full"],
   auth: {

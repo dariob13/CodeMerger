@@ -43,7 +43,7 @@ function ChoiceMenu({ label, value, options, onChange }: { label: string; value:
         {label}
         <span className="ml-auto pl-6 text-muted-foreground">{options.find(([v]) => v === value)?.[1]}</span>
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
+      <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
         <DropdownMenuRadioGroup value={value || DEFAULT} onValueChange={(next) => onChange(next === DEFAULT ? "" : next)}>
           {options.map(([v, text]) => (
             <DropdownMenuRadioItem key={v} value={v || DEFAULT}>

@@ -82,7 +82,9 @@ export const ChatMessage = React.memo(function ChatMessage({ chatId, message, ag
             {agent?.name || message.agent}
           </>
         )}
-        {message.model && <span className="font-normal text-muted-foreground">{message.model}</span>}
+        {message.model && (
+          <span className="font-normal text-muted-foreground">{agent?.models.find(([v]) => v === message.model)?.[1] ?? message.model}</span>
+        )}
         <AgentTimer message={message} />
       </header>
       {message.parts.map((part, i) =>
