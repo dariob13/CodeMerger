@@ -10,6 +10,9 @@ import os from "node:os"
 import { execFile } from "node:child_process"
 import { isImage, type Access, type AgentEvent, type Attachment, type AuthState, type UsageReport, type UsageWindow } from "@/lib/types"
 
+// How full a session's context window is, in tokens.
+export type SessionContext = { used: number; window: number }
+
 export type ParsedEvent = AgentEvent | { type: "session"; id: string } | { type: "usage"; usage: UsageReport }
 
 type BuildOptions = {
@@ -41,6 +44,8 @@ export type Agent = {
   // For CLIs that record their rate limits on disk instead of in their output: the limits
   // after the given session's last turn, or the most recent ones known when no session is given.
   readUsage?(sessionId?: string): Promise<UsageReport | null>
+  // How much of its context window the session had used after its last turn, when the CLI tells.
+  readContext?(sessionId: string): Promise<SessionContext | null>
   // stdout is the answer; no sessions, so the transcript is replayed each turn
   plainText?: boolean
   build(options: BuildOptions): { args: string[]; stdin?: string }
@@ -96,9 +101,11 @@ function windowLabel(minutes: number) {
   return minutes % 1440 === 0 ? `${minutes / 1440}-day` : `${Math.round(minutes / 60)}-hour`
 }
 
-// Codex writes each session to ~/.codex/sessions/YYYY/MM/DD/rollout-<time>-<thread id>.jsonl,
-// and every turn in it ends with a token_count event carrying the account's rate limits.
-async function codexUsage(sessionId?: string): Promise<UsageReport | null> {
+// Codex writes each session to ~/.codex/sessions/YYYY/MM/DD/rollout-<time>-<thread id>.jsonl, and every turn
+// in it ends with a token_count event carrying the account's rate limits and the session's token counts.
+// Returns those events for a session, or for the most recent one when no session is given, newest first.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Codex's own event shape
+async function codexTokenCounts(sessionId?: string): Promise<any[]> {
   const root = path.join(process.env.CODEX_HOME || path.join(os.homedir(), ".codex"), "sessions")
   const newestFirst = async (dir: string) => (await fsp.readdir(dir).catch(() => [] as string[])).sort().reverse()
   const days: string[] = []
@@ -125,30 +132,47 @@ async function codexUsage(sessionId?: string): Promise<UsageReport | null> {
     }
     if (file && sessionId) break
   }
-  if (!file) return null
+  if (!file) return []
 
-  // The event we want is near the end; a long session's file can be large.
+  // The events we want are near the end; a long session's file can be large.
   const handle = await fsp.open(/* turbopackIgnore: true */ file, "r") // a path outside the project, found at run time
   try {
     const { size } = await handle.stat()
     const length = Math.min(size, 512 * 1024)
     const { buffer } = await handle.read(Buffer.alloc(length), 0, length, size - length)
+    const events = []
     for (const line of buffer.toString("utf8").split("\n").reverse()) {
       if (!line.includes('"token_count"')) continue
       try {
-        const limits = JSON.parse(line).payload?.rate_limits
-        const windows: UsageWindow[] = [limits?.primary, limits?.secondary].flatMap((w) =>
-          w && typeof w.used_percent === "number" ? [{ label: windowLabel(w.window_minutes), used: w.used_percent, resetsAt: w.resets_at * 1000 }] : []
-        )
-        if (windows.length) return { windows, plan: typeof limits.plan_type === "string" ? limits.plan_type : undefined }
+        events.push(JSON.parse(line).payload)
       } catch {
         // A line cut in half by the tail read; keep looking.
       }
     }
-    return null
+    return events
   } finally {
     await handle.close()
   }
+}
+
+async function codexUsage(sessionId?: string): Promise<UsageReport | null> {
+  for (const event of await codexTokenCounts(sessionId)) {
+    const limits = event?.rate_limits
+    const windows: UsageWindow[] = [limits?.primary, limits?.secondary].flatMap((w) =>
+      w && typeof w.used_percent === "number" ? [{ label: windowLabel(w.window_minutes), used: w.used_percent, resetsAt: w.resets_at * 1000 }] : []
+    )
+    if (windows.length) return { windows, plan: typeof limits.plan_type === "string" ? limits.plan_type : undefined }
+  }
+  return null
+}
+
+async function codexContext(sessionId: string): Promise<SessionContext | null> {
+  for (const event of await codexTokenCounts(sessionId)) {
+    const used = event?.info?.last_token_usage?.total_tokens
+    const window = event?.info?.model_context_window
+    if (typeof used === "number" && typeof window === "number" && window > 0) return { used, window }
+  }
+  return null
 }
 
 // Codex keeps the models the signed-in account can use in ~/.codex/models_cache.json and refreshes it itself.
@@ -182,6 +206,11 @@ function codexModels(): [string, string][] {
     return CODEX_MODELS
   }
 }
+
+// Claude Code reports a session's token counts only in its output, so the last ones seen are kept here
+// until the app restarts. On globalThis because every route bundle gets its own copy of this module.
+const claudeContexts: Map<string, SessionContext> = ((globalThis as typeof globalThis & { __codeMergerContexts?: Map<string, SessionContext> }).__codeMergerContexts ??=
+  new Map())
 
 const claude: Agent = {
   id: "claude",
@@ -233,8 +262,10 @@ const claude: Agent = {
     if (attachments.length) args.push("--add-dir", uploadsDir)
     return { args, stdin: prompt }
   },
+  readContext: async (sessionId) => claudeContexts.get(sessionId) ?? null,
   createParser() {
     const text = textJoiner()
+    let contextUsed = 0 // what the latest request had in its window, and added to it
     return (ev) => {
       const out: ParsedEvent[] = []
       if (ev.session_id && ev.type === "system" && ev.subtype === "init") out.push({ type: "session", id: ev.session_id })
@@ -252,6 +283,8 @@ const claude: Agent = {
         if (e.type === "message_start") text.breakNext()
         if (e.type === "content_block_delta" && e.delta?.type === "text_delta") text.push(out, e.delta.text)
       } else if (ev.type === "assistant") {
+        const u = ev.message?.usage
+        if (u) contextUsed = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.output_tokens || 0)
         for (const b of ev.message?.content || []) {
           if (b.type === "tool_use") {
             out.push({ type: "tool", tool: { id: b.id, name: b.name, detail: describeInput(b.input), status: "running" } })
@@ -265,6 +298,9 @@ const claude: Agent = {
           }
         }
       } else if (ev.type === "result") {
+        // Subagents on smaller models are listed too; the session runs on the largest window.
+        const window = Math.max(0, ...Object.values((ev.modelUsage || {}) as Record<string, { contextWindow?: number }>).map((m) => m.contextWindow || 0))
+        if (ev.session_id && contextUsed && window) claudeContexts.set(ev.session_id, { used: contextUsed, window })
         if (ev.is_error) {
           const message = typeof ev.result === "string" && ev.result ? ev.result : `Claude ended with: ${ev.subtype || "error"}`
           out.push({ type: "error", message })
@@ -300,6 +336,7 @@ const codex: Agent = {
     },
   },
   readUsage: codexUsage,
+  readContext: codexContext,
   build({ prompt, sessionId, model, effort, access, attachments }) {
     const args = sessionId ? ["exec", "resume"] : ["exec"]
     // Images go in as real image input. -i takes a list, so a flag has to follow it.
