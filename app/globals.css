@@ -259,3 +259,11 @@
 .workspace-panel :where(span, p, input, button, h3) { line-height: normal; }
 .workspace-panel .font-mono { font-family: var(--font-workspace-mono), monospace; }
 :root:not(.dark) .workspace-panel img:not([src*="imgIconFile"]) { filter: brightness(0.6); }
+
+/* Keep dragging smooth even when the pointer crosses selectable content. */
+body:has([data-resizing]) { cursor: col-resize; user-select: none; }
+body:has([data-resizing]) * { cursor: col-resize !important; }
+
+@media (min-width: 1024px) {
+  .app-layout { --sidebar-reserve: var(--desktop-panel-reserve); }
+}

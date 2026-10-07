@@ -2,6 +2,8 @@
 
 import * as React from "react"
 import { CornerUpRightIcon, FolderIcon, FolderPlusIcon, PanelRightIcon, PencilIcon, SquareTerminalIcon, XIcon } from "lucide-react"
+import { PanelResizeHandle } from "@/components/panel-resize-handle"
+import { usePanelWidth } from "@/hooks/use-panel-width"
 import { AgentIcon } from "@/components/agent-icon"
 import { AgentMark, AgentMarkTile } from "@/components/agent-mark"
 import { AgentDialog, AgentPanel } from "@/components/agent-panel"
@@ -36,6 +38,7 @@ export type View = "chat" | "inbox" | "notes" | "automations"
 const TITLES: Record<Exclude<View, "chat">, string> = { inbox: "Inbox", notes: "Notes", automations: "Automations" }
 
 export function ChatApp() {
+  const agentPanel = usePanelWidth("agent-details", 240, 720)
   const state = useChats()
   const workspace = useWorkspace(state)
   const { chat, agents, project, projects, reloadChats } = state
@@ -110,11 +113,11 @@ export function ChatApp() {
   }, [chat, title, view])
 
   return (
-    <SidebarProvider className="h-svh" style={{ "--agent": engine?.color } as React.CSSProperties}>
+    <SidebarProvider className="app-layout h-svh" style={{ "--agent": engine?.color, "--desktop-panel-reserve": `${240 + (workspaceShown ? 220 : 0) + (workspaceShown && workspace.activeDocument ? 240 : 0) + (persona ? 240 : 0)}px` } as React.CSSProperties}>
       <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} personas={personas.personas} onNewAgent={() => setEditing("new")} />
       <SidebarInset className="h-svh min-w-0 flex-row overflow-hidden bg-transparent">
         {workspaceShown && <WorkspacePanel key={project.id} state={state} workspace={workspace} />}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div data-resize-center className="flex min-w-0 flex-1 flex-col lg:min-w-60">
           <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
             <SidebarTrigger />
             {workspaceShown && <WorkspaceDrawer key={project.id} state={state} workspace={workspace} />}
@@ -201,7 +204,7 @@ export function ChatApp() {
           )}
 
           <div className={view === "chat" && project ? "flex min-h-0 flex-1" : "hidden"}>
-            <div className="flex min-w-0 flex-1 flex-col">
+            <div data-resize-center className="flex min-w-0 flex-1 flex-col lg:min-w-60">
               <ScrollArea className="min-h-0 flex-1">
                 <div className="mx-auto flex min-h-[calc(100svh-11.5rem)] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
                   {messages?.length ? (
@@ -279,7 +282,10 @@ export function ChatApp() {
                 <UsageMarker agent={engine} usage={usage.find((u) => u.agent === engine.id)} onReload={reloadUsage} />
               )}
             </div>
-            {persona && <AgentPanel key={persona.id} persona={persona} personas={personas} onDeleted={state.releasePersona} className="hidden w-90 shrink-0 border-l lg:flex" />}
+            {persona && <div style={{ width: agentPanel.width ?? 360 }} className="relative hidden min-w-60 flex-col border-l lg:flex">
+              <PanelResizeHandle label="agent details" width={agentPanel.width ?? 360} min={240} max={720} edge="left" onResize={agentPanel.resize} />
+              <AgentPanel key={persona.id} persona={persona} personas={personas} onDeleted={state.releasePersona} className="flex-1" />
+            </div>}
           </div>
         </div>
         {workspaceShown && workspace.activeDocument && <WorkspaceEditor workspace={workspace} />}

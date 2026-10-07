@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { PanelResizeHandle } from "@/components/panel-resize-handle"
+import { usePanelWidth } from "@/hooks/use-panel-width"
 import { WorkspaceIcon } from "@/components/workspace-icon"
 import { WorkspaceSessions } from "@/components/workspace-sessions"
 import { WorkspaceExplorer } from "@/components/workspace-explorer"
@@ -12,11 +14,13 @@ import { cn } from "@/lib/utils"
 
 const TABS: WorkspaceTab[] = ["sessions", "explorer", "changes"]
 export function WorkspacePanel({ state, workspace, compact = false }: { state: ChatsState; workspace: WorkspaceState; compact?: boolean }) {
+  const { width, resize } = usePanelWidth("workspace", 220, 600)
   const panel = React.useRef<HTMLElement>(null)
   const id = React.useId()
   const selectTab = (tab: WorkspaceTab) => workspace.setTab(tab)
   return (
-    <aside ref={panel} className={cn("workspace-panel w-68 shrink-0 flex-col border-r", compact ? "flex h-full" : "hidden lg:flex")} aria-label="Workspace">
+    <aside ref={panel} style={compact ? undefined : { width: width ?? 272 }} className={cn("workspace-panel relative min-w-0 flex-col border-r", compact ? "flex h-full w-full" : "hidden min-w-[220px] shrink lg:flex")} aria-label="Workspace">
+      {!compact && <PanelResizeHandle label="workspace" width={width ?? 272} min={220} max={600} onResize={resize} />}
       <header className="flex h-12 shrink-0 items-center gap-3 border-b pr-3.5 pl-4">
         <h2 className="min-w-0 flex-1 truncate text-[15px] font-medium tracking-[-0.21px]">Workspace</h2>
         <Button variant="ghost" size="icon-xs" className="size-[15px] rounded-sm" aria-label="Search workspace" title="Search workspace" onClick={() => {
@@ -26,7 +30,7 @@ export function WorkspacePanel({ state, workspace, compact = false }: { state: C
         <Button variant="ghost" size="icon-xs" className="size-[15px] rounded-sm" aria-label="New session" title="New session" onClick={() => { selectTab("sessions"); state.newChat() }}><WorkspaceIcon name="0-imgIconPlus" /></Button>
       </header>
       <div role="tablist" aria-label="Workspace tabs" className="flex h-[45px] shrink-0 gap-0.5 border-b px-2.5 py-2">
-        {TABS.map((tab, index) => <Button key={tab} id={`${id}-tab-${tab}`} role="tab" data-workspace-tab={tab} aria-selected={workspace.tab === tab} aria-controls={`${id}-${tab}`} tabIndex={workspace.tab === tab ? 0 : -1} variant="ghost" className={cn("h-7 rounded-lg px-2.5 text-[13px] font-normal tracking-[-0.078px] text-subtle", workspace.tab === tab && "bg-muted font-medium text-foreground")} onClick={() => selectTab(tab)} onKeyDown={(e) => {
+        {TABS.map((tab, index) => <Button key={tab} id={`${id}-tab-${tab}`} role="tab" data-workspace-tab={tab} aria-selected={workspace.tab === tab} aria-controls={`${id}-${tab}`} tabIndex={workspace.tab === tab ? 0 : -1} variant="ghost" className={cn("h-7 min-w-0 flex-1 rounded-lg px-1.5 text-[13px] font-normal tracking-[-0.078px] text-subtle", workspace.tab === tab && "bg-muted font-medium text-foreground")} onClick={() => selectTab(tab)} onKeyDown={(e) => {
           const next = e.key === "ArrowRight" ? (index + 1) % 3 : e.key === "ArrowLeft" ? (index + 2) % 3 : e.key === "Home" ? 0 : e.key === "End" ? 2 : -1
           if (next < 0) return
           e.preventDefault(); selectTab(TABS[next]); panel.current?.querySelector<HTMLButtonElement>(`[data-workspace-tab="${TABS[next]}"]`)?.focus()
