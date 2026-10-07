@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge"
 import { InboxView } from "@/components/inbox-view"
 import { NotesView } from "@/components/notes-view"
 import { TabStrip } from "@/components/tab-strip"
-import { WorkingSnake } from "@/components/working-snake"
 import { WorkspacePanel } from "@/components/workspace-panel"
 import { WorkspaceEditor } from "@/components/workspace-editor"
 import { WorkspaceDrawer } from "@/components/workspace-drawer"
@@ -182,12 +181,6 @@ export function ChatApp() {
               <div ref={bottom} aria-hidden />
             </div>
           </ScrollArea>
-
-          {view === "chat" && project && replying?.role === "assistant" && replying.status === "running" && (
-            <div className="mx-auto w-full max-w-3xl px-4">
-              <WorkingSnake label={`${replying.persona?.name ?? agents.find((a) => a.id === replying.agent)?.short ?? "Agent"} is working`} />
-            </div>
-          )}
 
           {/* One composer per tab, so a draft stays with its tab. */}
           {view === "chat" &&

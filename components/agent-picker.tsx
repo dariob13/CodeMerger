@@ -159,14 +159,18 @@ export function AgentPicker({ state, personas, persona, model, effort, access }:
             <Slider
               aria-label="Effort"
               // The popover is the same shade as the default track.
-              className="**:data-[slot=slider-track]:bg-foreground/15"
+              // The thumb and the filled part glide to the new level instead of jumping.
+              className="*:transition-[left] *:duration-200 *:ease-out **:data-[slot=slider-range]:transition-[right] **:data-[slot=slider-range]:duration-200 **:data-[slot=slider-range]:ease-out motion-reduce:*:transition-none motion-reduce:**:data-[slot=slider-range]:transition-none **:data-[slot=slider-track]:bg-foreground/15"
               min={0}
               max={agent.efforts.length - 1}
               step={1}
               value={[effortIndex]}
               onValueChange={([index]) => setPick({ efforts: { ...pick.efforts, [agent.id]: agent.efforts[index][0] } })}
             />
-            <span className="w-18 shrink-0 text-right text-xs font-medium">{agent.efforts[effortIndex][1].replace(/ effort$/, "")}</span>
+            {/* Keyed by level, so each new label fades in. */}
+            <span key={effortIndex} className="w-18 shrink-0 animate-in text-right text-xs font-medium duration-200 fade-in-0 slide-in-from-bottom-1 motion-reduce:animate-none">
+              {agent.efforts[effortIndex][1].replace(/ effort$/, "")}
+            </span>
           </div>
         )}
 
