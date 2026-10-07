@@ -1,10 +1,14 @@
 "use client"
 
 import * as React from "react"
+import { FolderOpenIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
+import { api } from "@/lib/api"
 
 type FormProps = {
   root: string // where project folders are created by default
@@ -20,7 +24,25 @@ export function ProjectForm({ root, onCreate, onCancel }: FormProps) {
   const [custom, setCustom] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [saving, setSaving] = React.useState(false)
+  const [choosing, setChoosing] = React.useState(false)
   const cwd = custom ?? (name.trim() ? `${root}/${folderName(name)}` : "")
+
+  // Opens the system's folder chooser, where an existing folder can be picked or a new one made.
+  const choose = async () => {
+    setChoosing(true)
+    try {
+      const { path } = await api<{ path: string | null }>("pick-folder", { method: "POST", body: { start: cwd || root } })
+      if (path) {
+        setCustom(path)
+        setError(null)
+        // A project with no name yet takes the folder's.
+        if (!name.trim()) setName(path.split(/[/\\]/).filter(Boolean).pop()?.slice(0, 60) ?? "")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+    setChoosing(false)
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,19 +61,26 @@ export function ProjectForm({ root, onCreate, onCancel }: FormProps) {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="project-folder">Folder</Label>
-        <Input
-          id="project-folder"
-          value={cwd}
-          spellCheck={false}
-          autoComplete="off"
-          placeholder={`${root}/My app`}
-          className="font-mono"
-          aria-describedby="project-folder-help"
-          aria-invalid={Boolean(error)}
-          onChange={(e) => setCustom(e.target.value)}
-        />
+        <InputGroup>
+          <InputGroupInput
+            id="project-folder"
+            value={cwd}
+            spellCheck={false}
+            autoComplete="off"
+            placeholder={`${root}/My app`}
+            className="font-mono"
+            aria-describedby="project-folder-help"
+            aria-invalid={Boolean(error)}
+            onChange={(e) => setCustom(e.target.value)}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton size="icon-xs" aria-label="Choose a folder" title="Choose a folder" disabled={choosing} onClick={choose}>
+              {choosing ? <Spinner /> : <FolderOpenIcon />}
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
         <p id="project-folder-help" className="text-sm text-muted-foreground">
-          Created if it doesn&apos;t exist. To work on code you already have, enter that folder&apos;s path.
+          Created if it doesn&apos;t exist. To work on code you already have, enter that folder&apos;s path or choose it with the folder button.
         </p>
       </div>
       {error && (
