@@ -1,60 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { ArrowUpIcon, ChevronDownIcon, FileIcon, ImageIcon, PaperclipIcon, PlusIcon, ShieldAlertIcon, SquareIcon, XIcon } from "lucide-react"
-import { AgentIcon } from "@/components/agent-icon"
-import { AgentMark } from "@/components/agent-mark"
+import { ArrowUpIcon, FileIcon, ImageIcon, PaperclipIcon, PlusIcon, SquareIcon, XIcon } from "lucide-react"
+import { AgentPicker } from "@/components/agent-picker"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { ChatsState } from "@/hooks/use-chats"
-import { agentStatus } from "@/lib/agent-status"
 import { isImage, type Access, type Persona } from "@/lib/types"
 
-const ACCESS: Record<Access, { label: string; hint: string }> = {
-  read: { label: "Read-only", hint: "Reads the folder and answers" },
-  edit: { label: "Can edit files", hint: "Creates and edits files in the folder" },
-  full: { label: "Full access", hint: "Edits and runs commands without asking" },
-}
-const DEFAULT = "default" // menu items can't have an empty value
 const MAX_FILES = 20
 
 type Option = [value: string, label: string]
-
-// A submenu with one choice out of a list, showing the current choice on its row.
-function ChoiceMenu({ label, value, options, onChange }: { label: string; value: string; options: Option[]; onChange: (value: string) => void }) {
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        {label}
-        <span className="ml-auto pl-6 text-muted-foreground">{options.find(([v]) => v === value)?.[1]}</span>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
-        <DropdownMenuRadioGroup value={value || DEFAULT} onValueChange={(next) => onChange(next === DEFAULT ? "" : next)}>
-          {options.map(([v, text]) => (
-            <DropdownMenuRadioItem key={v} value={v || DEFAULT}>
-              {text}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  )
-}
 
 // A file waiting to be sent, with an object URL to preview it if it is an image.
 type Draft = { file: File; preview: string | null }
@@ -80,7 +38,7 @@ function FileChip({ draft: { file, preview }, onRemove }: { draft: Draft; onRemo
 
 // `active` is false for the composers of the tabs in the background, which keep their drafts.
 export function Composer({ state, personas, active }: { state: ChatsState; personas: Persona[]; active: boolean }) {
-  const { agents, agent, pick, running, setPick, send, stop } = state
+  const { agent, pick, running, send, stop } = state
   const [text, setText] = React.useState("")
   const [files, setFiles] = React.useState<Draft[]>([])
   const [sending, setSending] = React.useState(false)
@@ -124,13 +82,6 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
       setFiles(draft.files)
     }
   }
-
-  // "Claude · Opus · High": only the choices that differ from the agent's defaults.
-  const summary = agent
-    ? [persona?.name ?? agent.short, model && agent.models.find(([v]) => v === model)?.[1], effort && agent.efforts.find(([v]) => v === effort)?.[1]]
-        .filter(Boolean)
-        .join(" · ")
-    : "No agent"
 
   return (
     <div hidden={!active} className="mx-auto w-full max-w-3xl px-4 pt-2 pb-4">
@@ -210,93 +161,7 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <InputGroupButton variant="ghost" size="sm" aria-label={`Agent, model and effort: ${summary}`}>
-                {persona ? <AgentMark name={persona.name} className="size-3.5" /> : agent && <AgentIcon id={agent.id} color={agent.color} />}
-                {summary}
-                {access === "full" && <ShieldAlertIcon className="text-destructive" aria-label="Full access" />}
-                <ChevronDownIcon className="text-muted-foreground" />
-              </InputGroupButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="top" className="w-72">
-              {personas.length > 0 && (
-                <>
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel>Your agents</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup
-                      value={persona?.id ?? ""}
-                      onValueChange={(id) => {
-                        const next = personas.find((p) => p.id === id)
-                        if (next) setPick({ persona: next.id, agent: next.agent })
-                      }}
-                    >
-                      {personas.map((p) => {
-                        const engine = agents.find((a) => a.id === p.agent)
-                        return (
-                          <DropdownMenuRadioItem key={p.id} value={p.id} disabled={!engine?.connected} onSelect={(e) => e.preventDefault()}>
-                            <AgentMark name={p.name} className="size-3.5" />
-                            {p.name}
-                            <span className="ml-auto pl-4 text-xs text-muted-foreground">on {engine?.short || p.agent}</span>
-                          </DropdownMenuRadioItem>
-                        )
-                      })}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>{personas.length ? "Coding agents" : "Agent"}</DropdownMenuLabel>
-                <DropdownMenuRadioGroup value={persona ? "" : agent?.id} onValueChange={(id) => setPick({ agent: id, persona: "" })}>
-                  {agents.map((a) => (
-                    // Stays open, so the model and effort can be set right after picking the agent.
-                    <DropdownMenuRadioItem key={a.id} value={a.id} disabled={!a.connected} onSelect={(e) => e.preventDefault()}>
-                      <AgentIcon id={a.id} color={a.connected ? a.color : undefined} />
-                      {a.name}
-                      <span className={`ml-auto pl-4 text-xs ${a.auth === "none" ? "text-destructive" : "text-muted-foreground"}`}>
-                        {[agentStatus(a), a.authDetail].filter(Boolean).join(" · ")}
-                      </span>
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuGroup>
-
-              {agent && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    {agent.models.length > 1 && (
-                      <ChoiceMenu
-                        label="Model"
-                        value={model}
-                        options={agent.models}
-                        onChange={(value) => setPick({ models: { ...pick.models, [agent.id]: value } })}
-                      />
-                    )}
-                    {agent.efforts.length > 1 && (
-                      <ChoiceMenu
-                        label="Effort"
-                        value={effort}
-                        options={agent.efforts}
-                        onChange={(value) => setPick({ efforts: { ...pick.efforts, [agent.id]: value } })}
-                      />
-                    )}
-                    <ChoiceMenu
-                      label="Permissions"
-                      value={access}
-                      options={agent.access.map((level) => [level, ACCESS[level].label])}
-                      onChange={(value) => setPick({ access: value as Access })}
-                    />
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <p className="px-1.5 py-1 text-xs text-muted-foreground">
-                    {agent.name}: {ACCESS[access].hint.toLowerCase()}.
-                  </p>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AgentPicker state={state} personas={personas} persona={persona} model={model} effort={effort} access={access} />
 
           <Tooltip>
             <TooltipTrigger asChild>
