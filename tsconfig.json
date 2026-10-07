@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "landing-page", ".old", "workspace", "data"]
+  "exclude": ["node_modules", "landing-page", "Code Merger", ".old", "workspace", "data"]
 }
