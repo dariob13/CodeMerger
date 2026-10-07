@@ -15,8 +15,10 @@ const subscribeClock = (notify: () => void) => {
 function RunningTimer({ startedAt, name }: { startedAt: number; name: string }) {
   const second = React.useSyncExternalStore(subscribeClock, currentSecond, serverSecond)
   const seconds = second ? Math.max(0, Math.floor((second * 1000 - startedAt) / 1000)) : 0
+  const value = seconds >= 3600 ? Math.floor(seconds / 3600) : seconds >= 60 ? Math.floor(seconds / 60) : seconds
+  const unit = seconds >= 3600 ? "hour" : seconds >= 60 ? "minute" : "second"
   return <span className="agent-working-text min-w-0 font-normal tabular-nums" role="timer" aria-live="off">
-    {name} has been working for {seconds} {seconds === 1 ? "second" : "seconds"}.
+    {name} has been working for {value} {unit}{value === 1 ? "" : "s"}.
   </span>
 }
 
