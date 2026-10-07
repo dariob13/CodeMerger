@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button"
 import { InboxView } from "@/components/inbox-view"
 import { NotesView } from "@/components/notes-view"
 import { TabStrip } from "@/components/tab-strip"
-import { UsageMarker } from "@/components/usage-marker"
 import { WorkspacePanel } from "@/components/workspace-panel"
 import { WorkspaceEditor } from "@/components/workspace-editor"
 import { WorkspaceDrawer } from "@/components/workspace-drawer"
@@ -114,7 +113,7 @@ export function ChatApp() {
 
   return (
     <SidebarProvider className="app-layout h-svh" style={{ "--agent": engine?.color, "--desktop-panel-reserve": `${240 + (workspaceShown ? 220 : 0) + (workspaceShown && workspace.activeDocument ? 240 : 0) + (persona ? 240 : 0)}px` } as React.CSSProperties}>
-      <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} personas={personas.personas} onNewAgent={() => setEditing("new")} />
+      <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} personas={personas.personas} onNewAgent={() => setEditing("new")} usageAgent={engine} usage={usage.find((u) => u.agent === engine?.id)} onReloadUsage={reloadUsage} />
       <SidebarInset className="h-svh min-w-0 flex-row overflow-hidden bg-transparent">
         {workspaceShown && <WorkspacePanel key={project.id} state={state} workspace={workspace} />}
         <div data-resize-center className="flex min-w-0 flex-1 flex-col lg:min-w-60">
@@ -206,7 +205,7 @@ export function ChatApp() {
           <div className={view === "chat" && project ? "flex min-h-0 flex-1" : "hidden"}>
             <div data-resize-center className="flex min-w-0 flex-1 flex-col lg:min-w-60">
               <ScrollArea className="min-h-0 flex-1">
-                <div className="mx-auto flex min-h-[calc(100svh-11.5rem)] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
+                <div className="mx-auto flex min-h-[calc(100svh-9.75rem)] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
                   {messages?.length ? (
                     messages.map((m, i) => (
                       <ChatMessage
@@ -277,9 +276,6 @@ export function ChatApp() {
                     </div>
                   )}
                 </div>
-              )}
-              {view === "chat" && project && engine && (
-                <UsageMarker agent={engine} usage={usage.find((u) => u.agent === engine.id)} onReload={reloadUsage} />
               )}
             </div>
             {persona && <div style={{ width: agentPanel.width ?? 360 }} className="relative hidden min-w-60 flex-col border-l lg:flex">

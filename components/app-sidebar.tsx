@@ -25,10 +25,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { ProjectDialog } from "@/components/project-form"
+import { UsagePanel } from "@/components/usage-panel"
 import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupAction,
   SidebarGroupContent,
@@ -47,7 +49,7 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import type { View } from "@/components/chat-app"
 import type { ChatsState } from "@/hooks/use-chats"
-import type { ChatSummary, Persona, Project } from "@/lib/types"
+import type { AgentInfo, AgentUsage, ChatSummary, Persona, Project } from "@/lib/types"
 
 type Props = {
   state: ChatsState
@@ -56,6 +58,10 @@ type Props = {
   unread: number
   personas: Persona[]
   onNewAgent: () => void
+  // The selected agent and its limits, for the Usage row.
+  usageAgent: AgentInfo | undefined
+  usage: AgentUsage | undefined
+  onReloadUsage: () => Promise<void>
 }
 
 const SECTIONS = [
@@ -64,7 +70,7 @@ const SECTIONS = [
   { view: "automations", label: "Automations", icon: WorkflowIcon },
 ] as const
 
-export function AppSidebar({ state, view, onView, unread, personas, onNewAgent }: Props) {
+export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, usageAgent, usage, onReloadUsage }: Props) {
   const { agents, projects, project, chats, chat, newChat, openChat, deleteChat, selectProject, deleteProject } = state
   const withAgent = view === "chat" ? state.activeTab.personaId : undefined // the agent whose chat is being looked at
   const [creating, setCreating] = React.useState(false)
@@ -229,6 +235,14 @@ export function AppSidebar({ state, view, onView, unread, personas, onNewAgent }
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <UsagePanel agent={usageAgent} usage={usage} onReload={onReloadUsage} />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
 
       <ProjectDialog open={creating} root={state.projectsRoot} onCreate={state.createProject} onClose={() => (setCreating(false), onView("chat"))} />
       <ConfirmDialog
