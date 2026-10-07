@@ -30,6 +30,7 @@ export type Agent = {
   short: string
   vendor: string
   command: string
+  aliases?: string[] // other names its CLI is installed under
   color: string
   install: string
   login: string
@@ -415,30 +416,183 @@ const opencode: Agent = {
   },
 }
 
-const gemini: Agent = {
-  id: "gemini",
-  name: "Gemini CLI",
-  short: "Gemini",
-  vendor: "Google",
-  command: "gemini",
-  color: "#4c8df6",
-  install: "npm install -g @google/gemini-cli",
-  login: "gemini  (sign in on first run)",
+// A prompt passed as an argument must not read as a flag.
+const asArgument = (prompt: string) => (prompt.startsWith("-") ? " " + prompt : prompt)
+
+// "readToolCall" -> "Read", "shellToolCall" -> "Shell"
+const cursorToolName = (key: string) => {
+  const name = key.replace(/ToolCall$/, "")
+  return name ? name[0].toUpperCase() + name.slice(1) : "Tool"
+}
+
+const cursor: Agent = {
+  id: "cursor",
+  name: "Cursor",
+  short: "Cursor",
+  vendor: "Anysphere",
+  command: "cursor-agent",
+  aliases: ["agent"], // the name newer installs use
+  color: "#8a8f98",
+  install: "curl https://cursor.com/install -fsS | bash",
+  login: "cursor-agent login",
   models: [["", "Default model"]],
   efforts: [],
-  access: ["read", "edit", "full"],
+  // Without --force its edits are only proposed, so there is no edit-only level.
+  access: ["read", "full"],
+  auth: {
+    args: ["status"],
+    parse(stdout) {
+      if (/not logged in/i.test(stdout)) return { state: "none", detail: "" }
+      return /logged in/i.test(stdout) ? { state: "ok", detail: "" } : { state: "unknown", detail: "" }
+    },
+  },
+  build({ prompt, sessionId, model, access }) {
+    const args = ["-p", "--output-format", "stream-json", "--stream-partial-output", "--trust"]
+    if (access === "full") args.push("--force")
+    else args.push("--mode", "ask")
+    if (model) args.push("--model", model)
+    if (sessionId) args.push("--resume", sessionId)
+    args.push(asArgument(prompt))
+    return { args }
+  },
+  createParser() {
+    const text = textJoiner()
+    return (ev) => {
+      const out: ParsedEvent[] = []
+      if (ev.type === "system" && ev.subtype === "init" && ev.session_id) out.push({ type: "session", id: ev.session_id })
+      else if (ev.type === "assistant") {
+        // Partial output: the deltas carry a timestamp, and each message is then repeated whole.
+        if (!ev.timestamp_ms || ev.model_call_id) text.breakNext()
+        else for (const b of ev.message?.content || []) if (b.type === "text") text.push(out, b.text)
+      } else if (ev.type === "tool_call" && ev.call_id) {
+        const [key, call] = Object.entries((ev.tool_call || {}) as Record<string, { args?: unknown }>)[0] || ["", {}]
+        out.push({
+          type: "tool",
+          tool: { id: ev.call_id, name: cursorToolName(key), detail: describeInput(call?.args), status: ev.subtype === "completed" ? "done" : "running" },
+        })
+      } else if (ev.type === "result") {
+        if (ev.is_error) out.push({ type: "error", message: typeof ev.result === "string" && ev.result ? ev.result : "Cursor reported an error" })
+        else if (!text.any) text.push(out, ev.result)
+      }
+      return out
+    }
+  },
+}
+
+const pi: Agent = {
+  id: "pi",
+  name: "Pi",
+  short: "Pi",
+  vendor: "Earendil Works",
+  command: "pi",
+  color: "#7bc4a4",
+  install: "npm install -g --ignore-scripts @earendil-works/pi-coding-agent",
+  login: "pi  (then /login)",
+  models: [["", "Default model"]],
+  efforts: [["", "Default effort"], ["minimal", "Minimal"], ["low", "Low"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra high"]],
+  // Pi runs its tools without asking, so the choice is between its read-only tools and all of them.
+  access: ["read", "full"],
+  build({ prompt, sessionId, model, effort, access, attachments }) {
+    const args = ["--mode", "json"]
+    if (access === "read") args.push("--tools", "read,grep,find,ls")
+    if (model) args.push("--model", model)
+    if (effort) args.push("--thinking", effort)
+    if (sessionId) args.push("--session", sessionId)
+    for (const file of attachments) args.push(`@${file.path}`)
+    args.push(asArgument(prompt))
+    return { args }
+  },
+  createParser() {
+    const text = textJoiner()
+    return (ev) => {
+      const out: ParsedEvent[] = []
+      if (ev.type === "session" && ev.id) out.push({ type: "session", id: ev.id })
+      else if (ev.type === "message_start" && ev.message?.role === "assistant") text.breakNext()
+      else if (ev.type === "message_update" && ev.assistantMessageEvent?.type === "text_delta") text.push(out, ev.assistantMessageEvent.delta)
+      else if (ev.type === "message_end" && ev.message?.role === "assistant" && ev.message.stopReason === "error") {
+        out.push({ type: "error", message: ev.message.errorMessage || "Pi reported an error" })
+      } else if (ev.type === "tool_execution_start") {
+        out.push({ type: "tool", tool: { id: ev.toolCallId, name: ev.toolName || "Tool", detail: describeInput(ev.args), status: "running" } })
+      } else if (ev.type === "tool_execution_end") {
+        out.push({ type: "tool", tool: { id: ev.toolCallId, status: ev.isError ? "error" : "done" } })
+      }
+      return out
+    }
+  },
+}
+
+// The three below print their answer as plain text, so the conversation is replayed to them each turn.
+// Their only permission switch is approving everything; left off, they refuse what would need approval.
+
+const grok: Agent = {
+  id: "grok",
+  name: "Grok",
+  short: "Grok",
+  vendor: "xAI",
+  command: "grok",
+  color: "#9aa0a6",
+  install: "",
+  login: "grok login",
+  models: [["", "Default model"]],
+  efforts: [],
+  access: ["read", "full"],
   plainText: true,
   build({ prompt, model, access }) {
-    const args: string[] = []
-    if (access === "edit") args.push("--approval-mode", "auto_edit")
-    if (access === "full") args.push("--approval-mode", "yolo")
+    const args = ["--output-format", "plain", "--no-auto-update"]
+    if (access === "full") args.push("--always-approve")
     if (model) args.push("-m", model)
     args.push("-p", prompt)
     return { args }
   },
 }
 
-const BUILTIN = [claude, codex, opencode, gemini]
+const antigravity: Agent = {
+  id: "antigravity",
+  name: "Antigravity",
+  short: "Antigravity",
+  vendor: "Google",
+  command: "agy",
+  color: "#3186ff",
+  install: "curl -fsSL https://antigravity.google/cli/install.sh | bash",
+  login: "agy  (sign in on first run)",
+  models: [["", "Default model"]],
+  efforts: [["", "Default effort"], ["low", "Low"], ["medium", "Medium"], ["high", "High"]],
+  access: ["read", "full"],
+  plainText: true,
+  build({ prompt, model, effort, access }) {
+    // A headless run is cut off after five minutes unless told otherwise.
+    const args = ["--output-format", "text", "--print-timeout", "2h"]
+    if (access === "full") args.push("--dangerously-skip-permissions")
+    if (model) args.push("--model", model)
+    if (effort) args.push("--effort", effort)
+    args.push("-p", prompt)
+    return { args }
+  },
+}
+
+const hermes: Agent = {
+  id: "hermes",
+  name: "Hermes",
+  short: "Hermes",
+  vendor: "Nous Research",
+  command: "hermes",
+  color: "#e0b45a",
+  install: "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash",
+  login: "hermes setup",
+  models: [["", "Default model"]],
+  efforts: [],
+  access: ["read", "full"],
+  plainText: true,
+  build({ prompt, model, access }) {
+    const args: string[] = []
+    if (model) args.push("--model", model)
+    if (access === "full") args.push("--yolo")
+    args.push("-z", prompt) // one prompt in, only the final answer out
+    return { args }
+  },
+}
+
+const BUILTIN = [claude, codex, opencode, cursor, antigravity, grok, hermes, pi]
 
 // Extra agents from data/agents.json: [{ id, name, command, args: ["--flag", "{prompt}"], color? }]
 // Their stdout is shown as the reply. If no arg contains {prompt}, the prompt is sent on stdin.
@@ -542,7 +696,7 @@ function authStatus(bin: string, check: AuthCheck) {
 export function detectAgents(agents: Agent[]): Promise<DetectedAgent[]> {
   return Promise.all(
     agents.map(async (agent) => {
-      const bin = which(agent.command)
+      const bin = [agent.command, ...(agent.aliases || [])].map(which).find(Boolean) ?? null
       if (!bin) return { agent, bin, version: "", auth: "unknown" as const, authDetail: "" }
       const [v, auth] = await Promise.all([version(bin), agent.auth ? authStatus(bin, agent.auth) : { state: "unknown" as const, detail: "" }])
       return { agent, bin, version: v, auth: auth.state, authDetail: auth.detail }

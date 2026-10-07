@@ -4,7 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 
 export const metadata = {
   title: 'Code Merger — Your agents. One place.',
-  description: 'One chat for Claude Code, Codex, OpenCode, and Gemini CLI. Switch agents mid-conversation with Code Merger, a local web app for your existing coding CLIs.',
+  description: 'One chat for Claude Code, Codex, and OpenCode. Switch agents mid-conversation with Code Merger, a local web app for your existing coding CLIs.',
   icons: { icon: '/favicon.svg' },
   openGraph: {
     title: 'Code Merger — Your agents. One place.',

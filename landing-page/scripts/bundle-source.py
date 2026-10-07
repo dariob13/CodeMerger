@@ -17,7 +17,7 @@ files = sorted({path for path in files if path.is_file() and not path.is_symlink
 destination.parent.mkdir(parents=True, exist_ok=True)
 readme = """# Code Merger — source development snapshot
 
-One chat for Claude Code, Codex, OpenCode, and Gemini CLI.
+One chat for Claude Code, Codex, and OpenCode.
 The app runs locally in your browser using your installed, signed-in agent CLIs.
 
 ## Start

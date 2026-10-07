@@ -9,7 +9,7 @@
 
 **One workspace for your coding agents, conversations, and projects.**
 
-Bring Claude Code, Codex, OpenCode, and Gemini CLI into one chat.
+Bring Claude Code, Codex, OpenCode, Cursor, Antigravity, Grok, Hermes, and Pi into one chat.
 Switch agents as you work, keep the conversation moving, and build in your own project folders.
 
 [Get started](#get-started) · [Features](#what-you-can-do) · [How it works](#how-it-works) · [Brand assets](#brand-assets)
@@ -26,7 +26,7 @@ The repository and the app currently retain the CodeMerger name while the boals 
 
 | | |
 | --- | --- |
-| **Build with your favorite agents** | Use Claude Code, Codex, OpenCode, and Gemini CLI through their installed CLIs and existing logins. |
+| **Build with your favorite agents** | Use Claude Code, Codex, OpenCode, Cursor, Antigravity, Grok, Hermes, and Pi through their installed CLIs and existing logins. |
 | **Switch without starting over** | Keep one conversation while each agent receives the context it missed. |
 | **Give every project a home** | Organize chats and automations around folders on your computer. |
 | **Choose how an agent works** | Pick its model, effort level, and supported access mode: read-only, file editing, or full access. |
