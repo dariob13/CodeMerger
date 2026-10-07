@@ -77,25 +77,31 @@ export const ChatMessage = React.memo(function ChatMessage({ chatId, message, ag
     )
   }
 
+  const modelName = agent?.models.find(([value]) => value === message.model)?.[1] ?? message.model
+  const workingName = message.persona?.name || modelName.replace(/-/g, " ") || agent?.name || message.agent
+
   return (
     <article className="min-w-0">
       <header className="mb-1.5 flex flex-wrap items-center gap-2 text-sm font-medium">
         {message.persona ? (
-          <>
-            <AgentMark name={message.persona.name} active={message.status === "running"} />
-            {message.persona.name}
-            <span className="font-normal text-subtle">on {agent?.name || message.agent}</span>
-          </>
+          <AgentMark name={message.persona.name} active={message.status === "running"} />
+        ) : (
+          <AgentIcon id={agent?.id} color={agent?.color} />
+        )}
+        {message.status === "running" ? (
+          <AgentTimer message={message} name={workingName} />
         ) : (
           <>
-            <AgentIcon id={agent?.id} color={agent?.color} />
-            {agent?.name || message.agent}
+            {message.persona ? (
+              <>
+                {message.persona.name}
+                <span className="font-normal text-subtle">on {agent?.name || message.agent}</span>
+              </>
+            ) : agent?.name || message.agent}
+            {modelName && <span className="font-normal text-muted-foreground">{modelName}</span>}
+            <AgentTimer message={message} name={workingName} />
           </>
         )}
-        {message.model && (
-          <span className="font-normal text-muted-foreground">{agent?.models.find(([v]) => v === message.model)?.[1] ?? message.model}</span>
-        )}
-        <AgentTimer message={message} />
       </header>
       {message.parts.map((part, i) =>
         part.type === "text" ? (
