@@ -60,26 +60,26 @@ export function WorkspaceExplorer({ state, workspace }: { state: ChatsState; wor
     const changed = folder && changes.some((c) => c.path.startsWith(`${entry.path}/`))
     const active = workspace.activeDocument === `file:${entry.path}`
     return <React.Fragment key={entry.path}>
-      <button role="treeitem" aria-expanded={folder ? open : undefined} aria-selected={active} aria-level={depth + 1} title={entry.path} className={cn("flex h-[26px] w-full items-center gap-1.5 rounded-lg pr-2 text-left text-[13px] text-muted-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring", active && "bg-muted font-medium text-foreground")} style={{ paddingLeft: 8 + depth * 14 }} onClick={() => {
+      <button role="treeitem" aria-expanded={folder ? open : undefined} aria-selected={active} aria-level={depth + 1} title={entry.path} className={cn("flex min-h-[26px] w-full min-w-0 items-start gap-1.5 rounded-lg py-1 pr-2 text-left text-[13px] whitespace-normal text-muted-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring", active && "bg-muted font-medium text-foreground")} style={{ paddingLeft: `min(${8 + depth * 14}px, 40%)` }} onClick={() => {
         if (folder) setExpanded((prev) => { const next = new Set(prev); if (next.has(entry.path)) next.delete(entry.path); else next.add(entry.path); return next })
         else void workspace.openFile(entry.path)
       }}>
         {folder ? <WorkspaceIcon name={open ? "1-imgIconChevronDown" : "1-imgIconChevronRight"} /> : <span className="w-3 shrink-0" />}
         <WorkspaceIcon name={folder ? "1-imgIconFolder1" : workspaceFileIcon(entry.path)} />
-        <span className="min-w-0 flex-1 truncate">{query.trim() ? entry.path : entry.name}</span>
-        {(status || changed) && <span className="font-mono text-[11px] text-subtle">{status || "•"}</span>}
+        <span className="min-w-0 flex-1 wrap-anywhere">{query.trim() ? entry.path : entry.name}</span>
+        {(status || changed) && <span className="shrink-0 font-mono text-[11px] text-subtle">{status || "•"}</span>}
       </button>
-      {folder && open && <div role="group" className="grid gap-px">{directories[entry.path]?.map((child) => renderEntry(child, depth + 1))}</div>}
+      {folder && open && <div role="group" className="grid min-w-0 grid-cols-1 gap-px">{directories[entry.path]?.map((child) => renderEntry(child, depth + 1))}</div>}
     </React.Fragment>
   }
 
   const changedCount = new Set(changes.map((c) => c.path)).size
-  return <div className="flex min-h-0 flex-1 flex-col gap-px px-2 py-2.5">
-    <div className="flex h-8 shrink-0 items-center gap-2 px-2"><WorkspaceIcon name="1-imgIconFolder" /><span className="min-w-0 flex-1 truncate text-[13px] font-medium">{state.project?.name}</span><Button variant="ghost" size="icon-xs" className="size-3.5 rounded-sm" aria-label="New file" onClick={() => setNewFile(true)}><WorkspaceIcon name="1-imgIconFilePlus" /></Button><Button variant="ghost" size="icon-xs" className="size-3.5 rounded-sm" aria-label="Collapse folders" onClick={() => setExpanded(new Set())}><WorkspaceIcon name="1-imgIconCollapse" /></Button></div>
+  return <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-px px-2 py-2.5">
+    <div className="flex min-h-8 shrink-0 items-center gap-2 px-2 py-1"><WorkspaceIcon name="1-imgIconFolder" /><span className="min-w-0 flex-1 text-[13px] font-medium wrap-anywhere">{state.project?.name}</span><Button variant="ghost" size="icon-xs" className="size-3.5 rounded-sm" aria-label="New file" onClick={() => setNewFile(true)}><WorkspaceIcon name="1-imgIconFilePlus" /></Button><Button variant="ghost" size="icon-xs" className="size-3.5 rounded-sm" aria-label="Collapse folders" onClick={() => setExpanded(new Set())}><WorkspaceIcon name="1-imgIconCollapse" /></Button></div>
     <label className="flex h-8 shrink-0 items-center gap-2 px-2"><WorkspaceIcon name="1-imgIconSearch1" /><input type="search" aria-label="Search files" placeholder="Search files…" className="workspace-search" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
     <div className="h-1 shrink-0" />
-    <ScrollArea className="min-h-0 flex-1"><div role="tree" aria-label="Project files" className="grid gap-px">{(query.trim() ? results : directories[""] ?? []).map((entry) => renderEntry(entry, 0))}</div>
-      {error && <p role="alert" className="px-2 py-3 text-xs text-destructive">{error}</p>}
+    <ScrollArea className="min-h-0 min-w-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block"><div role="tree" aria-label="Project files" className="grid min-w-0 grid-cols-1 gap-px">{(query.trim() ? results : directories[""] ?? []).map((entry) => renderEntry(entry, 0))}</div>
+      {error && <p role="alert" className="px-2 py-3 text-xs text-destructive wrap-anywhere">{error}</p>}
       {loading && !Object.keys(directories).length && <p className="px-2 py-3 text-xs text-subtle">Loading files…</p>}
       {!loading && query.trim() && !results.length && <p className="px-2 py-3 text-xs text-subtle">No files match</p>}
       {truncated && <p className="px-2 py-3 text-xs text-subtle">Showing the first matches. Narrow your search to find more.</p>}
