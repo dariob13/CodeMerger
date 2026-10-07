@@ -34,6 +34,15 @@ try {
   for (const entry of ["server.js", "package.json", "node_modules", buildDir]) {
     await cp(path.join(root, buildDir, "standalone", entry), path.join(serverDir, entry), { recursive: true, dereference: true })
   }
+  // Include all compiled server chunks; prerendered pages can load them at runtime too.
+  await cp(path.join(root, buildDir, "server"), path.join(serverDir, buildDir, "server"), { recursive: true })
+  // Runtime-loaded API modules are not all represented in Next's standalone traces.
+  // Include Next itself so an installed app never falls back to the repo's node_modules.
+  await cp(path.join(root, "node_modules/next"), path.join(serverDir, "node_modules/next"), {
+    recursive: true,
+    dereference: true,
+    filter: (file) => !file.endsWith(".map") && !file.includes(`${path.sep}dist${path.sep}docs`),
+  })
   await cp(path.join(root, buildDir, "static"), path.join(serverDir, buildDir, "static"), { recursive: true })
   await cp(path.join(root, "public"), path.join(serverDir, "public"), { recursive: true })
   const forbidden = ["data", "workspace", ".env", ".git", "Code Merger"]

@@ -12,6 +12,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-single-instance = "2"
 libc = "0.2"
+ctrlc = { version = "3", features = ["termination"] }
 
 [profile.release]
 strip = true

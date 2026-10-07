@@ -20,8 +20,9 @@
     "externalBin": ["binaries/node"],
     "resources": { "resources/server/": "server/" },
     "macOS": {
-      "minimumSystemVersion": "12.0",
+      "minimumSystemVersion": "13.5",
       "signingIdentity": "-",
+      "entitlements": "Entitlements.plist",
       "dmg": {
         "windowSize": { "width": 600, "height": 400 },
         "appPosition": { "x": 170, "y": 190 },
