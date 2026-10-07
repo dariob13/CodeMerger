@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronRightIcon, FolderIcon, FolderPlusIcon, SquareTerminalIcon } from "lucide-react"
+import { FolderIcon, FolderPlusIcon, SquareTerminalIcon } from "lucide-react"
 import { AgentsView } from "@/components/agents-view"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AutomationsView } from "@/components/automations-view"
@@ -11,6 +11,7 @@ import { ProjectForm } from "@/components/project-form"
 import { Badge } from "@/components/ui/badge"
 import { InboxView } from "@/components/inbox-view"
 import { NotesView } from "@/components/notes-view"
+import { TabStrip } from "@/components/tab-strip"
 import { WorkspacePanel } from "@/components/workspace-panel"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -27,8 +28,9 @@ export function ChatApp() {
   const state = useChats()
   const { chat, agents, project, projects, reloadChats } = state
   const inbox = useInbox(reloadChats) // a new inbox item means an automation made a new chat
-  const { usage, reload: reloadUsage } = useUsage(state.running) // limits move when a reply finishes
-  const personas = usePersonas(state.running) // a reply finishing may have added to an agent's memory
+  const replies = state.runningTabs.length
+  const { usage, reload: reloadUsage } = useUsage(replies) // limits move when a reply finishes
+  const personas = usePersonas(replies) // a reply finishing may have added to an agent's memory
   const [view, setView] = React.useState<View>("chat")
   const chatTitle = !project ? "New project" : chat?.title || "New chat"
   const title = view === "chat" ? chatTitle : TITLES[view]
@@ -48,10 +50,23 @@ export function ChatApp() {
   }, [])
   React.useEffect(() => {
     atBottom.current = true
-  }, [chat?.id])
+  }, [state.activeTab.key])
   React.useEffect(() => {
     if (atBottom.current) bottom.current?.scrollIntoView({ block: "end" })
-  }, [messages, view])
+  }, [messages, view, state.activeTab.key])
+
+  // ⌘T opens a new tab. Browsers keep ⌘T for their own tabs unless the app has its own window, so ⌃T and ⌥T work too.
+  const { newChat } = state
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "KeyT" || e.shiftKey || !(e.metaKey || e.ctrlKey || e.altKey)) return
+      e.preventDefault()
+      newChat()
+      setView("chat")
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [newChat])
 
   React.useEffect(() => {
     document.title = view !== "chat" || chat ? `${title} · Code Merger` : "Code Merger"
@@ -65,17 +80,20 @@ export function ChatApp() {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
             <SidebarTrigger />
-            <h1 className="flex min-w-0 flex-1 items-center gap-1 text-sm font-medium tracking-tight">
-              {view === "chat" && project && (
-                <>
-                  <span className="shrink-0 text-muted-foreground">{project.name}</span>
-                  <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                </>
-              )}
-              <span className="truncate">{title}</span>
-            </h1>
+            {view === "chat" && project ? (
+              <>
+                <h1 className="sr-only">{title}</h1>
+                <TabStrip state={state} />
+              </>
+            ) : (
+              <h1 className="min-w-0 flex-1 truncate text-sm font-medium tracking-tight">{title}</h1>
+            )}
             {view === "chat" && project && (
-              <Badge variant="outline" className="h-7 max-w-[40%] gap-1.5 bg-card px-2.5 font-normal text-muted-foreground" title={`Project folder: ${project.cwd}`}>
+              <Badge
+                variant="outline"
+                className="hidden h-7 max-w-[30%] gap-1.5 bg-card px-2.5 font-normal text-muted-foreground md:flex"
+                title={`Project folder: ${project.cwd}`}
+              >
                 <FolderIcon />
                 <span className="truncate [direction:rtl]">&lrm;{project.cwd}</span>
               </Badge>
@@ -159,7 +177,10 @@ export function ChatApp() {
             </div>
           </ScrollArea>
 
-          {view === "chat" && project && <Composer state={state} personas={personas.personas} />}
+          {/* One composer per tab, so a draft stays with its tab. */}
+          {view === "chat" &&
+            project &&
+            state.tabs.map((tab) => <Composer key={tab.key} state={state} personas={personas.personas} active={tab.key === state.activeTab.key} />)}
         </div>
       </SidebarInset>
     </SidebarProvider>

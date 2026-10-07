@@ -78,7 +78,8 @@ function FileChip({ draft: { file, preview }, onRemove }: { draft: Draft; onRemo
   )
 }
 
-export function Composer({ state, personas }: { state: ChatsState; personas: Persona[] }) {
+// `active` is false for the composers of the tabs in the background, which keep their drafts.
+export function Composer({ state, personas, active }: { state: ChatsState; personas: Persona[]; active: boolean }) {
   const { agents, agent, pick, running, setPick, send, stop } = state
   const [text, setText] = React.useState("")
   const [files, setFiles] = React.useState<Draft[]>([])
@@ -86,6 +87,10 @@ export function Composer({ state, personas }: { state: ChatsState; personas: Per
   const input = React.useRef<HTMLTextAreaElement>(null)
   const filePicker = React.useRef<HTMLInputElement>(null)
   const photoPicker = React.useRef<HTMLInputElement>(null)
+
+  React.useEffect(() => {
+    if (active) input.current?.focus()
+  }, [active])
 
   // One of the user's own agents, while the CLI it runs on is the one selected.
   const persona = personas.find((p) => p.id === pick.persona && p.agent === agent?.id)
@@ -128,7 +133,7 @@ export function Composer({ state, personas }: { state: ChatsState; personas: Per
     : "No agent"
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pt-2 pb-4">
+    <div hidden={!active} className="mx-auto w-full max-w-3xl px-4 pt-2 pb-4">
       <input ref={filePicker} type="file" multiple hidden onChange={(e) => (addFiles(e.target.files || []), (e.target.value = ""))} />
       <input
         ref={photoPicker}
@@ -161,7 +166,6 @@ export function Composer({ state, personas }: { state: ChatsState; personas: Per
           ref={input}
           value={text}
           rows={1}
-          autoFocus
           readOnly={!agent}
           aria-label="Message"
           placeholder={agent ? `Message ${persona?.name ?? agent.name}…` : "Connect an agent to start chatting"}
