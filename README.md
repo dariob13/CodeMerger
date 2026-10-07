@@ -75,7 +75,7 @@ The server listens on `127.0.0.1`; `proxy.ts` rejects requests originating from 
 
 Notes save as you type. Automations run on demand, at a daily time, or on an interval; each run creates a chat and sends its result to the inbox. Scheduled work runs while the app is running, and missed runs are skipped.
 
-Custom agents can keep standing duties and memories across turns.
+Custom agents keep standing duties and memories across turns. Each one is listed in the sidebar and has its own chat in every project, with its duties and memory beside it.
 
 ## Inside the repo
 

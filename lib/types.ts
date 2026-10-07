@@ -45,6 +45,7 @@ export type ChatSummary = {
   status?: AssistantMessage["status"]
   activity?: string
   unread?: boolean
+  personaId?: string // set when the chat is the one the user has with one of their own agents
 }
 export type ChatDetail = ChatSummary & { messages: Message[] }
 

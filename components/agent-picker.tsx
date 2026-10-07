@@ -3,13 +3,12 @@
 import * as React from "react"
 import { CheckIcon, ChevronDownIcon, RefreshCwIcon, SearchIcon, ShieldAlertIcon } from "lucide-react"
 import { AgentIcon } from "@/components/agent-icon"
-import { AgentMark } from "@/components/agent-mark"
 import { InputGroupButton } from "@/components/ui/input-group"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { Spinner } from "@/components/ui/spinner"
 import type { ChatsState } from "@/hooks/use-chats"
-import type { Access, Persona } from "@/lib/types"
+import type { Access, AgentInfo } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export const ACCESS: Record<Access, { label: string; hint: string }> = {
@@ -21,8 +20,8 @@ const SEARCH_FROM = 7 // models before the list gets a search field
 
 type Props = {
   state: ChatsState
-  personas: Persona[]
-  persona: Persona | undefined // the user's own agent that is answering, if any
+  agent: AgentInfo | null
+  locked: boolean // in the chat with one of the user's own agents, which keeps the CLI it runs on
   model: string
   effort: string
   access: Access
@@ -109,18 +108,18 @@ function Models({ options, value, agentName, onChange }: { options: [string, str
 }
 
 // The agent, its model, how hard it thinks and what it may touch, all in one panel.
-export function AgentPicker({ state, personas, persona, model, effort, access }: Props) {
-  const { agents, agent, pick, setPick, recheck } = state
+export function AgentPicker({ state, agent, locked, model, effort, access }: Props) {
+  const { agents, pick, setPick, recheck } = state
   const effortIndex = Math.max(agent?.efforts.findIndex(([v]) => v === effort) ?? 0, 0)
   const labelOf = (options: [string, string][] | undefined, value: string) => (value && options?.find(([v]) => v === value)?.[1]) || ""
   const choices = agent ? [labelOf(agent.models, model), labelOf(agent.efforts, effort), ACCESS[access].label].filter(Boolean).join(" · ") : ""
-  const name = agent ? (persona?.name ?? agent.short) : "No agent"
+  const name = agent ? agent.short : "No agent"
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         <InputGroupButton variant="ghost" size="sm" className="min-w-0 shrink" aria-label={`Agent, model, effort and access: ${name}${choices && `, ${choices}`}`}>
-          {persona ? <AgentMark name={persona.name} className="size-3.5" /> : agent && <AgentIcon id={agent.id} color={agent.color} />}
+          {agent && <AgentIcon id={agent.id} color={agent.color} />}
           <span className="shrink-0">{name}</span>
           <span className="truncate font-normal text-muted-foreground">{choices}</span>
           {access === "full" && <ShieldAlertIcon className="text-destructive" aria-label="Full access" />}
@@ -129,41 +128,21 @@ export function AgentPicker({ state, personas, persona, model, effort, access }:
       </PopoverTrigger>
       <PopoverContent align="start" side="top" sideOffset={8} className="w-[400px] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-xl p-0">
         <div className="flex">
-          <div className="flex max-h-[258px] w-41 shrink-0 flex-col gap-px overflow-y-auto border-r p-2">
-            {personas.length > 0 && (
-              <>
-                <Label>Your agents</Label>
-                <div role="radiogroup" aria-label="Your agents" className="flex flex-col gap-px">
-                  {personas.map((p) => {
-                    const engine = agents.find((a) => a.id === p.agent)
-                    return (
-                      <Row
-                        key={p.id}
-                        selected={persona?.id === p.id}
-                        disabled={!engine?.connected}
-                        title={`On ${engine?.name || p.agent}`}
-                        onClick={() => setPick({ persona: p.id, agent: p.agent })}
-                      >
-                        <AgentMark name={p.name} className="size-3.5" />
-                        <span className="truncate">{p.name}</span>
-                      </Row>
-                    )
-                  })}
-                </div>
-              </>
-            )}
-            <Label action={<Recheck recheck={recheck} />}>{personas.length ? "Coding agents" : "Agent"}</Label>
-            <div role="radiogroup" aria-label="Agent" className="flex flex-col gap-px">
-              {agents.map((a) => (
-                <Row key={a.id} selected={!persona && agent?.id === a.id} disabled={!a.connected} onClick={() => setPick({ agent: a.id, persona: "" })}>
-                  <AgentIcon id={a.id} color={a.connected ? a.color : undefined} />
-                  <span className="truncate">{a.name}</span>
-                  {!a.connected && <span className="ml-auto shrink-0 text-[11px]">Set up</span>}
-                  {a.connected && a.auth === "none" && <span className="ml-auto shrink-0 text-[11px] font-normal text-destructive">Sign in</span>}
-                </Row>
-              ))}
+          {!locked && (
+            <div className="flex max-h-[258px] w-41 shrink-0 flex-col gap-px overflow-y-auto border-r p-2">
+              <Label action={<Recheck recheck={recheck} />}>Agent</Label>
+              <div role="radiogroup" aria-label="Agent" className="flex flex-col gap-px">
+                {agents.map((a) => (
+                  <Row key={a.id} selected={agent?.id === a.id} disabled={!a.connected} onClick={() => setPick({ agent: a.id })}>
+                    <AgentIcon id={a.id} color={a.connected ? a.color : undefined} />
+                    <span className="truncate">{a.name}</span>
+                    {!a.connected && <span className="ml-auto shrink-0 text-[11px]">Set up</span>}
+                    {a.connected && a.auth === "none" && <span className="ml-auto shrink-0 text-[11px] font-normal text-destructive">Sign in</span>}
+                  </Row>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           {agent && (
             <Models
               key={agent.id}

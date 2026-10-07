@@ -12,11 +12,16 @@ export async function POST(request: Request) {
   const project = state.projects.find((p) => p.id === body.projectId)
   if (!project) return fail("Create a project first.")
   if (!isDir(project.cwd)) return fail(`The folder for ${project.name} no longer exists: ${project.cwd}`)
+  // Each of the user's own agents has one chat per project, so asking again returns the one it has.
+  const persona = state.personas.find((p) => p.id === body.personaId)
+  const own = persona && [...state.chats.values()].find((c) => c.personaId === persona.id && c.projectId === project.id)
+  if (own) return json({ chat: { ...summary(own), messages: own.messages } })
   const now = Date.now()
   const chat: Chat = {
     id: newId(),
     projectId: project.id,
-    title: "New chat",
+    personaId: persona?.id,
+    title: persona?.name ?? "New chat",
     cwd: project.cwd,
     createdAt: now,
     updatedAt: now,

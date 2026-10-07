@@ -17,18 +17,18 @@ import {
 } from "@/lib/types"
 
 // What the next message is sent with. Model and effort are remembered per agent.
-// `persona` is one of the user's own agents, or "" to talk to the CLI directly.
-export type Pick = { agent: string; persona: string; access: Access; models: Record<string, string>; efforts: Record<string, string> }
-export type SendOptions = { model: string; effort: string; access: Access; persona: string; files: File[]; skills?: string[] }
+export type Pick = { agent: string; access: Access; models: Record<string, string>; efforts: Record<string, string> }
+export type SendOptions = { agent: string; model: string; effort: string; access: Access; files: File[]; skills?: string[] }
 
 // One open tab. A tab without a chat is a new chat that hasn't had its first message yet.
-export type Tab = { key: string; chatId: string | null; projectId: string | null }
+// `personaId` makes it the chat with one of the user's own agents, which is opened from the sidebar instead of the tab strip.
+export type Tab = { key: string; chatId: string | null; projectId: string | null; personaId?: string }
 type Strip = { tabs: Tab[]; active: string }
 
-const DEFAULT_PICK: Pick = { agent: "", persona: "", access: "read", models: {}, efforts: {} }
+const DEFAULT_PICK: Pick = { agent: "", access: "read", models: {}, efforts: {} }
 const BACKGROUND_POLL = 2500
 const fail = (err: unknown) => toast.error(err instanceof Error ? err.message : String(err))
-const newTab = (projectId: string | null, chatId: string | null = null): Tab => ({ key: crypto.randomUUID(), chatId, projectId })
+const newTab = (projectId: string | null, chatId: string | null = null, personaId?: string): Tab => ({ key: crypto.randomUUID(), chatId, projectId, personaId })
 const isRunning = (chat: ChatDetail | undefined) => Boolean(chat?.messages.some((m) => m.role === "assistant" && m.status === "running"))
 
 // A fixed key, so the server and the browser render the same first tab.
@@ -100,7 +100,7 @@ export function useChats() {
       const { chat } = await api<{ chat: ChatDetail }>(`chats/${id}`)
       if (!force && (versions.current[id] ?? 0) !== version) return null
       setDetails((prev) => ({ ...prev, [id]: chat }))
-      setStrip((prev) => ({ ...prev, tabs: prev.tabs.map((t) => (t.chatId === id && t.projectId !== chat.projectId ? { ...t, projectId: chat.projectId } : t)) }))
+      setStrip((prev) => ({ ...prev, tabs: prev.tabs.map((t) => (t.chatId === id && (t.projectId !== chat.projectId || t.personaId !== chat.personaId) ? { ...t, projectId: chat.projectId, personaId: chat.personaId } : t)) }))
       return chat
     } catch (err) {
       if (force) return null
@@ -128,18 +128,43 @@ export function useChats() {
   // Shows a chat: in the tab it is already open in, in place of an unused new chat, or in a new tab.
   const openChat = React.useCallback(
     (id: string, knownProjectId?: string) => {
-      const projectId = knownProjectId ?? chats.find((c) => c.id === id)?.projectId ?? null
+      const known = chats.find((c) => c.id === id)
+      const projectId = knownProjectId ?? known?.projectId ?? null
       setStrip((prev) => {
         const open = prev.tabs.find((t) => t.chatId === id)
         if (open) return { ...prev, active: open.key }
         const current = prev.tabs.find((t) => t.key === prev.active)
-        if (current && !current.chatId) return { ...prev, tabs: prev.tabs.map((t) => (t === current ? { ...t, chatId: id, projectId: projectId ?? t.projectId } : t)) }
-        const tab = newTab(projectId, id)
+        if (current && !current.chatId && !current.personaId && !known?.personaId) {
+          return { ...prev, tabs: prev.tabs.map((t) => (t === current ? { ...t, chatId: id, projectId: projectId ?? t.projectId } : t)) }
+        }
+        const tab = newTab(projectId, id, known?.personaId)
         return { tabs: [...prev.tabs, tab], active: tab.key }
       })
     },
     [chats]
   )
+
+  // Shows the chat with one of the user's own agents in the project being looked at. Each agent has one per project.
+  const openAgent = React.useCallback(
+    (personaId: string) => {
+      setStrip((prev) => {
+        const projectId = prev.tabs.find((t) => t.key === prev.active)?.projectId ?? null
+        const open = prev.tabs.find((t) => t.personaId === personaId && t.projectId === projectId)
+        if (open) return { ...prev, active: open.key }
+        const tab = newTab(projectId, chats.find((c) => c.personaId === personaId && c.projectId === projectId)?.id ?? null, personaId)
+        return { tabs: [...prev.tabs, tab], active: tab.key }
+      })
+    },
+    [chats]
+  )
+
+  // An agent that was deleted leaves its chats behind as ordinary chats.
+  const releasePersona = React.useCallback((personaId: string) => {
+    const release = <T extends { personaId?: string }>(item: T) => (item.personaId === personaId ? { ...item, personaId: undefined } : item)
+    setChats((prev) => prev.map(release))
+    setDetails((prev) => Object.fromEntries(Object.entries(prev).map(([id, chat]) => [id, release(chat)])))
+    setStrip((prev) => ({ ...prev, tabs: prev.tabs.map(release) }))
+  }, [])
 
   const loadAgents = React.useCallback(async (refresh = false) => {
     setAgents((await api<{ agents: AgentInfo[] }>(`agents${refresh ? "?refresh" : ""}`)).agents)
@@ -158,11 +183,11 @@ export function useChats() {
   const send = React.useCallback(
     async (text: string, { files, ...options }: SendOptions) => {
       const tab = activeTab
-      if (!agent || running || !tab.projectId) return false
+      if (!options.agent || running || !tab.projectId) return false
       try {
         let id = tab.chatId
         if (!id) {
-          const { chat } = await api<{ chat: ChatDetail }>("chats", { method: "POST", body: { projectId: tab.projectId } })
+          const { chat } = await api<{ chat: ChatDetail }>("chats", { method: "POST", body: { projectId: tab.projectId, personaId: tab.personaId } })
           id = chat.id
           versions.current[id] = 1
           setDetails((prev) => ({ ...prev, [chat.id]: chat }))
@@ -184,7 +209,7 @@ export function useChats() {
         }
         const res = await api<{ user: UserMessage; message: AssistantMessage; chat: ChatSummary }>(`chats/${id}/messages`, {
           method: "POST",
-          body: { text, agent: agent.id, attachments, ...options },
+          body: { text, attachments, ...options },
         })
         // A fetch of the chat may have brought the new messages in already.
         mutate(id, (chat) => ({ ...chat, messages: [...chat.messages, ...[res.user, res.message].filter((m) => !chat.messages.some((old) => old.id === m.id))] }))
@@ -196,7 +221,7 @@ export function useChats() {
         return false
       }
     },
-    [activeTab, agent, handoffs, mutate, running, upsertSummary]
+    [activeTab, handoffs, mutate, running, upsertSummary]
   )
 
   // Runs a chat's last prompt again; the new reply takes the place of the one it got.
@@ -230,7 +255,7 @@ export function useChats() {
       const tab = newTab(activeTab.projectId)
       setHandoffs((prev) => ({ ...prev, [tab.key]: file }))
       setStrip((prev) => ({ tabs: [...prev.tabs, tab], active: tab.key }))
-      setPick({ agent: target.agent, persona: "" })
+      setPick({ agent: target.agent })
     },
     [activeTab.projectId, setPick]
   )
@@ -259,8 +284,8 @@ export function useChats() {
     localStorage.setItem("project", id)
     setStrip((prev) => {
       const current = prev.tabs.find((t) => t.key === prev.active)
-      if (current && !current.chatId) return { ...prev, tabs: prev.tabs.map((t) => (t === current ? { ...t, projectId: id } : t)) }
-      const unused = prev.tabs.find((t) => !t.chatId && t.projectId === id)
+      if (current && !current.chatId && !current.personaId) return { ...prev, tabs: prev.tabs.map((t) => (t === current ? { ...t, projectId: id } : t)) }
+      const unused = prev.tabs.find((t) => !t.chatId && !t.personaId && t.projectId === id)
       if (unused) return { ...prev, active: unused.key }
       const tab = newTab(id)
       return { tabs: [...prev.tabs, tab], active: tab.key }
@@ -349,7 +374,7 @@ export function useChats() {
     let left = false
     const timer = setTimeout(async () => {
       const chat = await loadChat(activeChatId)
-      if (!left && chat?.lastAgent) setPick({ agent: chat.lastAgent })
+      if (!left && chat?.lastAgent && !chat.personaId) setPick({ agent: chat.lastAgent })
     }, 0)
     return () => {
       left = true
@@ -366,7 +391,9 @@ export function useChats() {
 
   React.useEffect(() => {
     if (!ready) return
-    localStorage.setItem("tabs", JSON.stringify({ tabs: tabs.map(({ chatId, projectId }) => ({ chatId, projectId })), active: tabs.indexOf(activeTab) }))
+    // An agent's chat that hasn't had a message yet is opened again from the sidebar.
+    const kept = tabs.filter((t) => t.chatId || !t.personaId)
+    localStorage.setItem("tabs", JSON.stringify({ tabs: kept.map(({ chatId, projectId }) => ({ chatId, projectId })), active: kept.indexOf(activeTab) }))
     if (activeTab.projectId) localStorage.setItem("project", activeTab.projectId)
   }, [activeTab, ready, tabs])
 
@@ -394,14 +421,14 @@ export function useChats() {
         }
         const restored = (Array.isArray(saved.tabs) ? saved.tabs : []).flatMap((t) => {
           const found = chats.find((c) => c.id === t?.chatId)
-          if (found) return [newTab(found.projectId, found.id)]
+          if (found) return [newTab(found.projectId, found.id, found.personaId)]
           return !t?.chatId && projects.some((p) => p.id === t?.projectId) ? [newTab(t.projectId as string)] : []
         })
         let active: Tab | undefined = restored[typeof saved.active === "number" ? saved.active : -1]
         const linked = chats.find((c) => c.id === location.hash.slice(1))
         if (linked) {
           active = restored.find((t) => t.chatId === linked.id)
-          if (!active) restored.push((active = newTab(linked.projectId, linked.id)))
+          if (!active) restored.push((active = newTab(linked.projectId, linked.id, linked.personaId)))
         }
         if (!restored.length) restored.push(newTab(fallback))
         setStrip({ tabs: restored, active: (active ?? restored[0]).key })
@@ -417,7 +444,7 @@ export function useChats() {
     ready, agents, connected, agent, projects, projectsRoot, project, chats, chat, running, pick,
     tabs, activeTab, runningTabs, selectTab, closeTab,
     handoffs, handOff, dropHandoff, retryReply,
-    setPick, newChat, openChat, deleteChat, send, stop, recheck, reloadChats, upsertSummary,
+    setPick, newChat, openChat, openAgent, releasePersona, deleteChat, send, stop, recheck, reloadChats, upsertSummary,
     selectProject, createProject, deleteProject,
   }
 }

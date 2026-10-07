@@ -1,6 +1,6 @@
 import { fail, json, readBody } from "@/lib/server/http"
 import { addMemory } from "@/lib/server/personas"
-import { saveList, state } from "@/lib/server/store"
+import { saveChat, saveList, state } from "@/lib/server/store"
 
 // Edits an agent. `remember` adds one memory and `forget` removes one by id.
 export async function PATCH(request: Request, { params }: RouteContext<"/api/personas/[id]">) {
@@ -26,9 +26,13 @@ export async function PATCH(request: Request, { params }: RouteContext<"/api/per
   return json({ persona })
 }
 
+// Removes the agent. The chats it had are kept, as ordinary chats in their projects.
 export async function DELETE(_request: Request, { params }: RouteContext<"/api/personas/[id]">) {
   const { id } = await params
   state.personas = state.personas.filter((p) => p.id !== id)
   await saveList("personas")
+  const kept = [...state.chats.values()].filter((c) => c.personaId === id)
+  for (const chat of kept) delete chat.personaId
+  await Promise.all(kept.map(saveChat))
   return json({ ok: true })
 }

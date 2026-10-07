@@ -38,6 +38,8 @@ export type Chat = {
   uploads?: Record<string, Attachment>
   // Set when the chat is a run of an automation.
   automationId?: string
+  // Set when the chat is the one the user has with one of their own agents in this project.
+  personaId?: string
   messages: Message[]
 }
 
@@ -209,6 +211,7 @@ export function summary(chat: Chat): ChatSummary {
     status: reply?.status,
     activity: tool?.type === "tool" ? `${tool.name}${tool.detail ? ` ${tool.detail}` : ""}` : undefined,
     unread: Boolean(reply?.finishedAt && reply.finishedAt > (chat.readAt ?? chat.updatedAt)),
+    personaId: chat.personaId,
   }
 }
 

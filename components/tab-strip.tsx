@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils"
 
 // The open chats, one tab each. A reply keeps going in its tab while another one is being looked at.
 export function TabStrip({ state }: { state: ChatsState }) {
-  const { tabs, activeTab, runningTabs, agents, chats, projects, selectTab, closeTab, newChat } = state
+  const { activeTab, runningTabs, agents, chats, projects, selectTab, closeTab, newChat } = state
+  const tabs = state.tabs.filter((t) => !t.personaId) // the chats with the user's own agents open from the sidebar
   const current = React.useRef<HTMLDivElement>(null)
   // With tabs from more than one project open, each says which project it is in.
   const mixed = new Set(tabs.map((t) => t.projectId)).size > 1

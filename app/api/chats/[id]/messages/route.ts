@@ -14,8 +14,8 @@ export async function POST(request: Request, { params }: RouteContext<"/api/chat
   const ids = Array.isArray(body.attachments) ? body.attachments.slice(0, 20) : []
   const attachments = ids.flatMap((id) => chat.uploads?.[String(id)] ?? [])
   const text = typeof body.text === "string" ? body.text.trim() : ""
-  // One of the user's own agents answers through the CLI it runs on.
-  const persona = typeof body.persona === "string" && body.persona ? state.personas.find((p) => p.id === body.persona) : undefined
+  // In the chat with one of the user's own agents, that agent answers, through the CLI it runs on.
+  const persona = state.personas.find((p) => p.id === chat.personaId)
   const info = (await detected()).find((d) => d.agent.id === (persona?.agent ?? body.agent))
   if (!info) return fail("Unknown agent.")
   if (!info.bin) return fail(`${info.agent.name} is not connected. Install its CLI, then recheck.`)

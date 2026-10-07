@@ -47,26 +47,26 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import type { View } from "@/components/chat-app"
 import type { ChatsState } from "@/hooks/use-chats"
-import type { ChatSummary, Project } from "@/lib/types"
+import type { ChatSummary, Persona, Project } from "@/lib/types"
 
 type Props = {
   state: ChatsState
   view: View
   onView: (view: View) => void
   unread: number
+  personas: Persona[]
+  onNewAgent: () => void
 }
-
-const AgentsIcon = () => <AgentMark name="agents" className="mx-px size-3.5" />
 
 const SECTIONS = [
   { view: "inbox", label: "Inbox", icon: InboxIcon },
   { view: "notes", label: "Notes", icon: NotebookPenIcon },
   { view: "automations", label: "Automations", icon: WorkflowIcon },
-  { view: "agents", label: "Agents", icon: AgentsIcon },
 ] as const
 
-export function AppSidebar({ state, view, onView, unread }: Props) {
+export function AppSidebar({ state, view, onView, unread, personas, onNewAgent }: Props) {
   const { agents, projects, project, chats, chat, newChat, openChat, deleteChat, selectProject, deleteProject } = state
+  const withAgent = view === "chat" ? state.activeTab.personaId : undefined // the agent whose chat is being looked at
   const [creating, setCreating] = React.useState(false)
   const [deletingProject, setDeletingProject] = React.useState<Project | null>(null)
   const { isMobile, setOpenMobile } = useSidebar()
@@ -131,6 +131,36 @@ export function AppSidebar({ state, view, onView, unread }: Props) {
         </SidebarGroup>
 
         <SidebarGroup>
+          <SidebarGroupLabel>Agents</SidebarGroupLabel>
+          <SidebarGroupAction title="New agent" aria-label="New agent" onClick={onNewAgent}>
+            <PlusIcon />
+          </SidebarGroupAction>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {!personas.length && <p className="px-2 py-1 text-sm text-muted-foreground">No agents yet</p>}
+              {personas.map((p) => (
+                <SidebarMenuItem key={p.id}>
+                  <SidebarMenuButton
+                    isActive={withAgent === p.id}
+                    title={project ? `Chat with ${p.name} in ${project.name}` : undefined}
+                    onClick={() => {
+                      // An agent works in a project's folder, so the first step without one is creating it.
+                      if (!project) return setCreating(true)
+                      state.openAgent(p.id)
+                      onView("chat")
+                      closeOnMobile()
+                    }}
+                  >
+                    <AgentMark name={p.name} active={chats.some((c) => c.personaId === p.id && c.running)} className="mx-px size-3.5" />
+                    <span>{p.name}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
           <SidebarGroupLabel>Projects</SidebarGroupLabel>
           <SidebarGroupAction title="New project" aria-label="New project" onClick={() => setCreating(true)}>
             <PlusIcon />
@@ -140,14 +170,14 @@ export function AppSidebar({ state, view, onView, unread }: Props) {
               {!projects.length && <p className="px-2 py-1 text-sm text-muted-foreground">No projects yet</p>}
               {projects.map((p) => {
                 const open = p.id === project?.id
-                const own = chats.filter((c) => c.projectId === p.id)
+                const own = chats.filter((c) => c.projectId === p.id && !c.personaId)
                 return (
                   <SidebarMenuItem key={p.id}>
                     <SidebarMenuButton
-                      isActive={view === "chat" && open && !chat}
+                      isActive={view === "chat" && open && !chat && !withAgent}
                       title={p.cwd}
                       // On wide screens the chats sit in the workspace column, so the open project is the selection here.
-                      className={view === "chat" && open ? "lg:bg-sidebar-accent lg:font-medium" : undefined}
+                      className={view === "chat" && open && !withAgent ? "lg:bg-sidebar-accent lg:font-medium" : undefined}
                       onClick={() => {
                         selectProject(p.id)
                         onView("chat")

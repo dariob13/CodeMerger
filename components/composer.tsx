@@ -40,8 +40,10 @@ function FileChip({ draft: { file, preview }, onRemove }: { draft: Draft; onRemo
 }
 
 // `active` is false for the composers of the tabs in the background, which keep their drafts.
-export function Composer({ state, personas, active }: { state: ChatsState; personas: Persona[]; active: boolean }) {
-  const { agent, pick, running, send, stop } = state
+// `persona` is set in the chat with one of the user's own agents: it answers there, on the CLI it runs on.
+export function Composer({ state, persona, active }: { state: ChatsState; persona?: Persona; active: boolean }) {
+  const { pick, running, send, stop } = state
+  const agent = persona ? (state.connected.find((a) => a.id === persona.agent) ?? null) : state.agent
   const [text, setText] = React.useState("")
   const [files, setFiles] = React.useState<Draft[]>([])
   const [sending, setSending] = React.useState(false)
@@ -58,11 +60,9 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
     if (active) input.current?.focus()
   }, [active])
 
-  // One of the user's own agents, while the CLI it runs on is the one selected.
-  const persona = personas.find((p) => p.id === pick.persona && p.agent === agent?.id)
   const valid = (options: Option[] | undefined, value: string | undefined) => (options?.some(([v]) => v === value) ? value! : "")
-  const model = valid(agent?.models, agent && pick.models[agent.id])
-  const effort = valid(agent?.efforts, agent && pick.efforts[agent.id])
+  const model = valid(agent?.models, agent ? pick.models[agent.id] : undefined)
+  const effort = valid(agent?.efforts, agent ? pick.efforts[agent.id] : undefined)
   const access: Access = agent?.access.includes(pick.access) ? pick.access : "read"
   const canSend = Boolean(agent) && !sending && (Boolean(text.trim()) || files.length > 0 || selectedSkills.length > 0)
   const removeSkill = (id: string) => setSelectedByContext((prev) => ({ ...prev, [catalog.key]: (prev[catalog.key] || []).filter((skill) => skill.id !== id) }))
@@ -84,13 +84,13 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
   }
 
   const submit = async () => {
-    if (!canSend || running) return
+    if (!canSend || running || !agent) return
     const draft = { text, files, skills: selectedSkills, skillKey: catalog.key }
     setText("")
     setFiles([])
     setSelectedByContext((prev) => ({ ...prev, [draft.skillKey]: [] }))
     setSending(true)
-    const sent = await send(draft.text.trim(), { model, effort, access, persona: persona?.id ?? "", files: draft.files.map((d) => d.file), skills: draft.skills.map((s) => s.id) })
+    const sent = await send(draft.text.trim(), { agent: agent.id, model, effort, access, files: draft.files.map((d) => d.file), skills: draft.skills.map((s) => s.id) })
     setSending(false)
     if (sent) release(draft.files)
     else {
@@ -137,7 +137,7 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
           rows={1}
           readOnly={!agent}
           aria-label="Message"
-          placeholder={agent ? `Message ${persona?.name ?? agent.name}…` : "Connect an agent to start chatting"}
+          placeholder={agent ? `Message ${persona?.name ?? agent.name}…` : persona ? `The agent ${persona.name} runs on is not connected` : "Connect an agent to start chatting"}
           className="max-h-60 min-h-12 px-4 pt-3.5 text-[15px] md:text-[15px]"
           onChange={(e) => {
             setText(e.target.value)
@@ -183,7 +183,7 @@ export function Composer({ state, personas, active }: { state: ChatsState; perso
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <AgentPicker state={state} personas={personas} persona={persona} model={model} effort={effort} access={access} />
+          <AgentPicker state={state} agent={agent} locked={Boolean(persona)} model={model} effort={effort} access={access} />
           <SkillPicker skills={catalog.skills} selected={selectedSkills} loading={catalog.loading} error={catalog.error} disabled={!agent} open={active && skillsOpen} onOpenChange={(open) => { setSkillsOpen(open); if (open) { setSkillQuery(""); void catalog.refresh() } }} query={skillQuery} onQueryChange={setSkillQuery} onSelect={selectSkill} onRefresh={catalog.refresh} onClose={() => { if (active) input.current?.focus() }} />
 
           <Tooltip>

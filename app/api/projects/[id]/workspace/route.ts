@@ -6,7 +6,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/proj
   try {
     const project = workspaceProject((await params).id)
     const git = await gitSnapshot(project)
-    const sessions = [...state.chats.values()].filter((c) => c.projectId === project.id).map(summary).sort((a, b) => b.updatedAt - a.updatedAt)
+    const sessions = [...state.chats.values()].filter((c) => c.projectId === project.id && !c.personaId).map(summary).sort((a, b) => b.updatedAt - a.updatedAt)
     return json({ sessions, git })
   } catch (error) { return workspaceFailure(error) }
 }

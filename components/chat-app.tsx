@@ -1,8 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { CornerUpRightIcon, FolderIcon, FolderPlusIcon, SquareTerminalIcon, XIcon } from "lucide-react"
-import { AgentsView } from "@/components/agents-view"
+import { CornerUpRightIcon, FolderIcon, FolderPlusIcon, PanelRightIcon, PencilIcon, SquareTerminalIcon, XIcon } from "lucide-react"
+import { AgentIcon } from "@/components/agent-icon"
+import { AgentMark, AgentMarkTile } from "@/components/agent-mark"
+import { AgentDialog, AgentPanel } from "@/components/agent-panel"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AutomationsView } from "@/components/automations-view"
 import { ChatMessage } from "@/components/chat-message"
@@ -20,6 +22,7 @@ import { WorkspaceEditor } from "@/components/workspace-editor"
 import { WorkspaceDrawer } from "@/components/workspace-drawer"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { useChats } from "@/hooks/use-chats"
 import { useContext } from "@/hooks/use-context"
@@ -27,9 +30,10 @@ import { useInbox } from "@/hooks/use-inbox"
 import { usePersonas } from "@/hooks/use-personas"
 import { useUsage } from "@/hooks/use-usage"
 import { useWorkspace } from "@/hooks/use-workspace"
+import type { Persona } from "@/lib/types"
 
-export type View = "chat" | "inbox" | "notes" | "automations" | "agents"
-const TITLES: Record<Exclude<View, "chat">, string> = { inbox: "Inbox", notes: "Notes", automations: "Automations", agents: "Agents" }
+export type View = "chat" | "inbox" | "notes" | "automations"
+const TITLES: Record<Exclude<View, "chat">, string> = { inbox: "Inbox", notes: "Notes", automations: "Automations" }
 
 export function ChatApp() {
   const state = useChats()
@@ -60,13 +64,18 @@ export function ChatApp() {
   }, [chatId, lastAgent, retryReply])
   const personas = usePersonas(replies) // a reply finishing may have added to an agent's memory
   const [view, setView] = React.useState<View>("chat")
-  const chatTitle = !project ? "New project" : chat?.title || "New chat"
+  const [editing, setEditing] = React.useState<Persona | "new" | null>(null)
+  // The chat with one of the user's own agents takes the place of the workspace and the tab strip.
+  const persona = view === "chat" && project ? personas.personas.find((p) => p.id === state.activeTab.personaId) : undefined
+  const engine = persona ? agents.find((a) => a.id === persona.agent) : state.agent
+  const workspaceShown = view === "chat" && project && !state.activeTab.personaId
+  const chatTitle = !project ? "New project" : (persona?.name ?? (chat?.title || "New chat"))
   const title = view === "chat" ? chatTitle : TITLES[view]
   const bottom = React.useRef<HTMLDivElement>(null)
   const atBottom = React.useRef(true)
   const messages = chat?.messages
-  const replying = messages?.[messages.length - 1]
-  const working = replying?.role === "assistant" && replying.status === "running" ? (replying.persona?.id ?? null) : null
+  const replying = messages?.at(-1)
+  const working = replying?.role === "assistant" && replying.status === "running"
 
   // Follow the reply as it streams, unless the user has scrolled up to read.
   React.useEffect(() => {
@@ -101,19 +110,28 @@ export function ChatApp() {
   }, [chat, title, view])
 
   return (
-    <SidebarProvider className="h-svh" style={{ "--agent": state.agent?.color } as React.CSSProperties}>
-      <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} />
+    <SidebarProvider className="h-svh" style={{ "--agent": engine?.color } as React.CSSProperties}>
+      <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} personas={personas.personas} onNewAgent={() => setEditing("new")} />
       <SidebarInset className="h-svh min-w-0 flex-row overflow-hidden bg-transparent">
-        {view === "chat" && project && <WorkspacePanel key={project.id} state={state} workspace={workspace} />}
+        {workspaceShown && <WorkspacePanel key={project.id} state={state} workspace={workspace} />}
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
             <SidebarTrigger />
-            {view === "chat" && project && <WorkspaceDrawer key={project.id} state={state} workspace={workspace} />}
-            {view === "chat" && project ? (
+            {workspaceShown && <WorkspaceDrawer key={project.id} state={state} workspace={workspace} />}
+            {workspaceShown ? (
               <>
                 <h1 className="sr-only">{title}</h1>
                 <TabStrip state={state} />
               </>
+            ) : persona ? (
+              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <AgentMarkTile name={persona.name} active={working} className="size-7 rounded-lg" />
+                <h1 className="truncate text-[15px] font-medium tracking-tight">{persona.name}</h1>
+                <p className="hidden shrink-0 items-center gap-1.5 text-[13px] text-subtle sm:flex">
+                  <AgentIcon id={engine?.id} color={engine?.color} className="size-3" />
+                  Runs on {engine?.name || persona.agent}
+                </p>
+              </div>
             ) : (
               <h1 className="min-w-0 flex-1 truncate text-sm font-medium tracking-tight">{title}</h1>
             )}
@@ -126,6 +144,27 @@ export function ChatApp() {
                 <FolderIcon />
                 <span className="truncate [direction:rtl]">&lrm;{project.cwd}</span>
               </Badge>
+            )}
+            {persona && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => setEditing(persona)}>
+                  <PencilIcon data-icon="inline-start" />
+                  Edit agent
+                </Button>
+                {/* Below the width the duties and memory sit beside the chat at, they open over it. */}
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label={`${persona.name}: duties and memory`}>
+                      <PanelRightIcon />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent className="gap-0 p-0 pt-8" aria-describedby={undefined}>
+                    <SheetTitle className="sr-only">{persona.name}</SheetTitle>
+                    <SheetDescription className="sr-only">Duties and memory.</SheetDescription>
+                    <AgentPanel key={persona.id} persona={persona} personas={personas} onDeleted={state.releasePersona} className="flex-1" />
+                  </SheetContent>
+                </Sheet>
+              </>
             )}
           </header>
 
@@ -143,19 +182,6 @@ export function ChatApp() {
           )}
           {view === "notes" && <NotesView />}
           {view === "automations" && <AutomationsView agents={agents} projects={projects} onRunStarted={state.upsertSummary} />}
-          {view === "agents" && (
-            <AgentsView
-              personas={personas}
-              agents={agents}
-              working={working}
-              onChat={(persona) => {
-                state.setPick({ persona: persona.id, agent: persona.agent })
-                state.newChat()
-                setView("chat")
-              }}
-            />
-          )}
-
           {/* No project yet: the first thing to do is create the folder the agents will work in. */}
           {view === "chat" && state.ready && !project && (
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-4">
@@ -174,75 +200,90 @@ export function ChatApp() {
             </div>
           )}
 
-          <ScrollArea className={view === "chat" && project ? "min-h-0 flex-1" : "hidden"}>
-            <div className="mx-auto flex min-h-[calc(100svh-11.5rem)] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
-              {messages?.length ? (
-                messages.map((m, i) => (
-                  <ChatMessage
-                    key={m.id}
-                    chatId={chat!.id}
-                    message={m}
-                    agent={m.role === "assistant" ? agents.find((a) => a.id === m.agent) : undefined}
-                    handoffs={handoffs}
-                    onHandOff={state.handOff}
-                    onRetry={i === messages.length - 1 && i > 0 ? retryLast : undefined}
-                  />
-                ))
-              ) : (
-                <Empty className="flex-1">
-                  <EmptyHeader className="max-w-lg">
-                    <EmptyMedia variant="icon" className="glass size-12 rounded-2xl">
-                      <SquareTerminalIcon className="size-5" />
-                    </EmptyMedia>
-                    <EmptyTitle className="pb-1 text-3xl font-medium tracking-tight">
-                      What are we working on?
-                    </EmptyTitle>
-                    <EmptyDescription className="text-base">
-                      New chat in <span className="font-medium text-foreground">{project?.name}</span>.{" "}
-                      Pick an agent below and start typing. You can switch agents at any point; the next one is handed the conversation so
-                      far.
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-              <div ref={bottom} aria-hidden />
-            </div>
-          </ScrollArea>
+          <div className={view === "chat" && project ? "flex min-h-0 flex-1" : "hidden"}>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="mx-auto flex min-h-[calc(100svh-11.5rem)] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
+                  {messages?.length ? (
+                    messages.map((m, i) => (
+                      <ChatMessage
+                        key={m.id}
+                        chatId={chat!.id}
+                        message={m}
+                        agent={m.role === "assistant" ? agents.find((a) => a.id === m.agent) : undefined}
+                        handoffs={handoffs}
+                        onHandOff={state.handOff}
+                        onRetry={i === messages.length - 1 && i > 0 ? retryLast : undefined}
+                      />
+                    ))
+                  ) : (
+                    <Empty className="flex-1">
+                      <EmptyHeader className="max-w-lg">
+                        <EmptyMedia variant="icon" className="glass size-12 rounded-2xl">
+                          {persona ? <AgentMark name={persona.name} className="size-5" /> : <SquareTerminalIcon className="size-5" />}
+                        </EmptyMedia>
+                        <EmptyTitle className="pb-1 text-3xl font-medium tracking-tight">
+                          {persona ? `What should ${persona.name} work on?` : "What are we working on?"}
+                        </EmptyTitle>
+                        <EmptyDescription className="text-base">
+                          {persona ? (
+                            <>
+                              This is {persona.name}&apos;s chat in <span className="font-medium text-foreground">{project?.name}</span>. It keeps
+                              its duties and its memory here, and picks the conversation up where you left it.
+                            </>
+                          ) : (
+                            <>
+                              New chat in <span className="font-medium text-foreground">{project?.name}</span>.{" "}
+                              Pick an agent below and start typing. You can switch agents at any point; the next one is handed the conversation
+                              so far.
+                            </>
+                          )}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  )}
+                  <div ref={bottom} aria-hidden />
+                </div>
+              </ScrollArea>
 
-          {view === "chat" && project && (
-            <div className="relative">
-              {/* One composer per tab, so a draft stays with its tab. */}
-              {handedOff && (
-                <div className="mx-auto flex w-full max-w-3xl px-4 pt-2">
-                  <Badge variant="secondary" className="h-7 gap-1.5 pr-1 pl-2 text-foreground">
-                    <CornerUpRightIcon />
-                    <span className="max-w-64 truncate">{handedOff.name}</span>
-                    <span className="font-normal text-muted-foreground">goes with your next message</span>
-                    <Button variant="ghost" size="icon-xs" className="rounded-full" aria-label="Remove the handed-off reply" onClick={() => state.dropHandoff(state.activeTab.key)}>
-                      <XIcon />
-                    </Button>
-                  </Badge>
+              {view === "chat" && project && (
+                <div className="relative">
+                  {/* One composer per tab, so a draft stays with its tab. */}
+                  {handedOff && (
+                    <div className="mx-auto flex w-full max-w-3xl px-4 pt-2">
+                      <Badge variant="secondary" className="h-7 gap-1.5 pr-1 pl-2 text-foreground">
+                        <CornerUpRightIcon />
+                        <span className="max-w-64 truncate">{handedOff.name}</span>
+                        <span className="font-normal text-muted-foreground">goes with your next message</span>
+                        <Button variant="ghost" size="icon-xs" className="rounded-full" aria-label="Remove the handed-off reply" onClick={() => state.dropHandoff(state.activeTab.key)}>
+                          <XIcon />
+                        </Button>
+                      </Badge>
+                    </div>
+                  )}
+                  {state.tabs.map((tab) => (
+                    <Composer key={tab.key} state={state} persona={personas.personas.find((p) => p.id === tab.personaId)} active={tab.key === state.activeTab.key} />
+                  ))}
+                  {context && (
+                    <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto w-full max-w-3xl">
+                      <ContextRing
+                        context={context}
+                        agentName={agents.find((a) => a.id === context.agent)?.short ?? context.agent}
+                        className="pointer-events-auto absolute top-4.5 right-6.5"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
-              {state.tabs.map((tab) => (
-                <Composer key={tab.key} state={state} personas={personas.personas} active={tab.key === state.activeTab.key} />
-              ))}
-              {context && (
-                <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto w-full max-w-3xl">
-                  <ContextRing
-                    context={context}
-                    agentName={agents.find((a) => a.id === context.agent)?.short ?? context.agent}
-                    className="pointer-events-auto absolute top-4.5 right-6.5"
-                  />
-                </div>
+              {view === "chat" && project && engine && (
+                <UsageMarker agent={engine} usage={usage.find((u) => u.agent === engine.id)} onReload={reloadUsage} />
               )}
             </div>
-          )}
-          {view === "chat" && project && state.agent && (
-            <UsageMarker agent={state.agent} usage={usage.find((u) => u.agent === state.agent!.id)} onReload={reloadUsage} />
-          )}
+            {persona && <AgentPanel key={persona.id} persona={persona} personas={personas} onDeleted={state.releasePersona} className="hidden w-90 shrink-0 border-l lg:flex" />}
+          </div>
         </div>
-        {view === "chat" && project && workspace.activeDocument && <WorkspaceEditor workspace={workspace} />}
+        {workspaceShown && workspace.activeDocument && <WorkspaceEditor workspace={workspace} />}
+        <AgentDialog editing={editing} agents={agents} personas={personas} onClose={() => setEditing(null)} />
       </SidebarInset>
     </SidebarProvider>
   )
