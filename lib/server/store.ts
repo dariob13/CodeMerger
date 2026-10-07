@@ -31,6 +31,7 @@ export type Chat = {
   createdAt: number
   updatedAt: number
   lastAgent: string | null
+  readAt?: number
   // Per agent: its CLI session, and how many of this chat's messages that session has seen.
   sessions: Record<string, { sessionId: string; seen: number }>
   // Every file uploaded to this chat, by id.
@@ -191,6 +192,9 @@ export async function removeChat(chat: Chat) {
 }
 
 export function summary(chat: Chat): ChatSummary {
+  const last = chat.messages.findLast((m) => m.role === "assistant")
+  const reply = last?.role === "assistant" ? last : undefined
+  const tool = reply?.parts.findLast((p) => p.type === "tool")
   return {
     id: chat.id,
     projectId: chat.projectId,
@@ -199,6 +203,12 @@ export function summary(chat: Chat): ChatSummary {
     updatedAt: chat.updatedAt,
     lastAgent: chat.lastAgent,
     running: state.runs.has(chat.id),
+    model: reply?.model,
+    startedAt: reply?.ts,
+    finishedAt: reply?.finishedAt,
+    status: reply?.status,
+    activity: tool?.type === "tool" ? `${tool.name}${tool.detail ? ` ${tool.detail}` : ""}` : undefined,
+    unread: Boolean(reply?.finishedAt && reply.finishedAt > (chat.readAt ?? chat.updatedAt)),
   }
 }
 

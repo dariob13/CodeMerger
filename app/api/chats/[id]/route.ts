@@ -13,6 +13,7 @@ export async function PATCH(request: Request, { params }: RouteContext<"/api/cha
   if (!chat) return fail("Chat not found", 404)
   const body = await readBody(request)
   if (typeof body.title === "string" && body.title.trim()) chat.title = body.title.trim().slice(0, 120)
+  if (body.read === true) chat.readAt = Date.now()
   await saveChat(chat)
   return json({ chat: summary(chat) })
 }

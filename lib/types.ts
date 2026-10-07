@@ -37,8 +37,21 @@ export type ChatSummary = {
   updatedAt: number
   lastAgent: string | null
   running: boolean
+  model?: string
+  startedAt?: number
+  finishedAt?: number
+  status?: AssistantMessage["status"]
+  activity?: string
+  unread?: boolean
 }
 export type ChatDetail = ChatSummary & { messages: Message[] }
+
+export type WorkspaceEntry = { name: string; path: string; kind: "file" | "directory" }
+export type WorkspaceFile = { path: string; content: string; version: string }
+export type GitChange = { path: string; originalPath?: string; status: string; staged: boolean; added: number; deleted: number; binary: boolean }
+export type GitCommit = { hash: string; subject: string; author: string; agent: string | null; ts: number; unpushed: boolean }
+export type WorkspaceGit = { available: boolean; branch: string; upstream: string | null; ahead: number; behind: number; changes: GitChange[]; history: GitCommit[] }
+export type WorkspaceSnapshot = { sessions: ChatSummary[]; git: WorkspaceGit }
 
 export type AgentInfo = {
   id: string

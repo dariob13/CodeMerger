@@ -6,7 +6,8 @@
     "dev": "next dev -H 127.0.0.1 -p 4317",
     "build": "next build",
     "start": "next build && next start -H 127.0.0.1 -p 4317",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:workspace": "node --test tests/workspace-api.test.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

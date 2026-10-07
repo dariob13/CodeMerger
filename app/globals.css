@@ -209,3 +209,28 @@
 [data-slot="sheet-overlay"] {
   background-color: rgb(0 0 0 / 55%);
 }
+
+/* Workspace values match the Sessions, Explorer and Changes Figma frames. */
+.workspace-panel {
+  --subtle: #6e6e6e;
+  --secondary: #ededed;
+  line-height: normal;
+}
+.dark .workspace-panel {
+  --subtle: #7a7a7a;
+  --secondary: #232323;
+}
+.workspace-search {
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px;
+  outline: none;
+}
+.workspace-search::placeholder { color: var(--subtle); }
+.workspace-search:focus-visible { box-shadow: 0 1px var(--ring); }
+.workspace-panel img { max-width: none; }
+.workspace-panel :where(span, p, input, button, h3) { line-height: normal; }
+.workspace-panel .font-mono { font-family: var(--font-workspace-mono), monospace; }
+:root:not(.dark) .workspace-panel img:not([src*="imgIconFile"]) { filter: brightness(0.6); }

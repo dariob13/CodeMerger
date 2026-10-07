@@ -13,6 +13,8 @@ import { InboxView } from "@/components/inbox-view"
 import { NotesView } from "@/components/notes-view"
 import { TabStrip } from "@/components/tab-strip"
 import { WorkspacePanel } from "@/components/workspace-panel"
+import { WorkspaceEditor } from "@/components/workspace-editor"
+import { WorkspaceDrawer } from "@/components/workspace-drawer"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -20,12 +22,14 @@ import { useChats } from "@/hooks/use-chats"
 import { useInbox } from "@/hooks/use-inbox"
 import { usePersonas } from "@/hooks/use-personas"
 import { useUsage } from "@/hooks/use-usage"
+import { useWorkspace } from "@/hooks/use-workspace"
 
 export type View = "chat" | "inbox" | "notes" | "automations" | "agents"
 const TITLES: Record<Exclude<View, "chat">, string> = { inbox: "Inbox", notes: "Notes", automations: "Automations", agents: "Agents" }
 
 export function ChatApp() {
   const state = useChats()
+  const workspace = useWorkspace(state)
   const { chat, agents, project, projects, reloadChats } = state
   const inbox = useInbox(reloadChats) // a new inbox item means an automation made a new chat
   const replies = state.runningTabs.length
@@ -76,10 +80,11 @@ export function ChatApp() {
     <SidebarProvider className="h-svh" style={{ "--agent": state.agent?.color } as React.CSSProperties}>
       <AppSidebar state={state} view={view} onView={setView} unread={inbox.unread} usage={usage} onReloadUsage={reloadUsage} />
       <SidebarInset className="h-svh min-w-0 flex-row overflow-hidden bg-transparent">
-        {view === "chat" && project && <WorkspacePanel state={state} />}
+        {view === "chat" && project && <WorkspacePanel key={project.id} state={state} workspace={workspace} />}
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
             <SidebarTrigger />
+            {view === "chat" && project && <WorkspaceDrawer key={project.id} state={state} workspace={workspace} />}
             {view === "chat" && project ? (
               <>
                 <h1 className="sr-only">{title}</h1>
@@ -182,6 +187,7 @@ export function ChatApp() {
             project &&
             state.tabs.map((tab) => <Composer key={tab.key} state={state} personas={personas.personas} active={tab.key === state.activeTab.key} />)}
         </div>
+        {view === "chat" && project && workspace.activeDocument && <WorkspaceEditor workspace={workspace} />}
       </SidebarInset>
     </SidebarProvider>
   )

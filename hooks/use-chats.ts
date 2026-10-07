@@ -125,8 +125,8 @@ export function useChats() {
 
   // Shows a chat: in the tab it is already open in, in place of an unused new chat, or in a new tab.
   const openChat = React.useCallback(
-    (id: string) => {
-      const projectId = chats.find((c) => c.id === id)?.projectId ?? null
+    (id: string, knownProjectId?: string) => {
+      const projectId = knownProjectId ?? chats.find((c) => c.id === id)?.projectId ?? null
       setStrip((prev) => {
         const open = prev.tabs.find((t) => t.chatId === id)
         if (open) return { ...prev, active: open.key }
