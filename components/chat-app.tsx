@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { FolderIcon, FolderPlusIcon, SquareTerminalIcon } from "lucide-react"
+import { CornerUpRightIcon, FolderIcon, FolderPlusIcon, SquareTerminalIcon, XIcon } from "lucide-react"
 import { AgentsView } from "@/components/agents-view"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AutomationsView } from "@/components/automations-view"
@@ -10,6 +10,7 @@ import { Composer } from "@/components/composer"
 import { ContextRing } from "@/components/context-ring"
 import { ProjectForm } from "@/components/project-form"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { InboxView } from "@/components/inbox-view"
 import { NotesView } from "@/components/notes-view"
 import { TabStrip } from "@/components/tab-strip"
@@ -38,6 +39,25 @@ export function ChatApp() {
   const replies = state.runningTabs.length
   const { usage, reload: reloadUsage } = useUsage(replies) // limits move when a reply finishes
   const context = useContext(chat?.id ?? null, state.running) // and so does how full the chat's context window is
+  const handedOff = state.handoffs[state.activeTab.key]
+  // Where a reply can go: any connected agent in a new chat, or another chat that is open in a tab.
+  const handoffs = React.useMemo(
+    () => ({
+      agents: state.connected,
+      chats: state.tabs.flatMap((tab) => {
+        const summary = tab.key !== state.activeTab.key && state.chats.find((c) => c.id === tab.chatId)
+        return summary ? [{ tabKey: tab.key, title: summary.title, agent: state.agents.find((a) => a.id === summary.lastAgent), running: summary.running }] : []
+      }),
+    }),
+    [state.activeTab.key, state.agents, state.chats, state.connected, state.tabs]
+  )
+  const { retryReply } = state
+  const lastReply = chat?.messages.at(-1)
+  const lastAgent = lastReply?.role === "assistant" ? lastReply.agent : null
+  const chatId = chat?.id
+  const retryLast = React.useCallback(() => {
+    if (chatId && lastAgent) retryReply(chatId, lastAgent)
+  }, [chatId, lastAgent, retryReply])
   const personas = usePersonas(replies) // a reply finishing may have added to an agent's memory
   const [view, setView] = React.useState<View>("chat")
   const chatTitle = !project ? "New project" : chat?.title || "New chat"
@@ -157,12 +177,15 @@ export function ChatApp() {
           <ScrollArea className={view === "chat" && project ? "min-h-0 flex-1" : "hidden"}>
             <div className="mx-auto flex min-h-[calc(100svh-11.5rem)] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
               {messages?.length ? (
-                messages.map((m) => (
+                messages.map((m, i) => (
                   <ChatMessage
                     key={m.id}
                     chatId={chat!.id}
                     message={m}
                     agent={m.role === "assistant" ? agents.find((a) => a.id === m.agent) : undefined}
+                    handoffs={handoffs}
+                    onHandOff={state.handOff}
+                    onRetry={i === messages.length - 1 && i > 0 ? retryLast : undefined}
                   />
                 ))
               ) : (
@@ -189,6 +212,18 @@ export function ChatApp() {
           {view === "chat" && project && (
             <div className="relative">
               {/* One composer per tab, so a draft stays with its tab. */}
+              {handedOff && (
+                <div className="mx-auto flex w-full max-w-3xl px-4 pt-2">
+                  <Badge variant="secondary" className="h-7 gap-1.5 pr-1 pl-2 text-foreground">
+                    <CornerUpRightIcon />
+                    <span className="max-w-64 truncate">{handedOff.name}</span>
+                    <span className="font-normal text-muted-foreground">goes with your next message</span>
+                    <Button variant="ghost" size="icon-xs" className="rounded-full" aria-label="Remove the handed-off reply" onClick={() => state.dropHandoff(state.activeTab.key)}>
+                      <XIcon />
+                    </Button>
+                  </Badge>
+                </div>
+              )}
               {state.tabs.map((tab) => (
                 <Composer key={tab.key} state={state} personas={personas.personas} active={tab.key === state.activeTab.key} />
               ))}

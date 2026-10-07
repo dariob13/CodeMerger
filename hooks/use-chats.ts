@@ -58,6 +58,8 @@ export function useChats() {
   const [pick, setPickState] = React.useState<Pick>(DEFAULT_PICK)
   const [ready, setReady] = React.useState(false)
   const [retry, setRetry] = React.useState(0)
+  // A reply handed to a tab, as a file that goes out with the next message sent from it.
+  const [handoffs, setHandoffs] = React.useState<Record<string, File>>({})
   // Counts the changes made here to each chat, so a slower fetch of it doesn't undo them.
   const versions = React.useRef<Record<string, number>>({})
 
@@ -168,7 +170,8 @@ export function useChats() {
           upsertSummary(chat)
         }
         const attachments: string[] = []
-        for (const file of files) {
+        const handed = handoffs[tab.key]
+        for (const file of handed ? [handed, ...files] : files) {
           const query = new URLSearchParams({ name: file.name, type: file.type })
           const res = await fetch(`/api/chats/${id}/uploads?${query}`, {
             method: "POST",
@@ -186,14 +189,55 @@ export function useChats() {
         // A fetch of the chat may have brought the new messages in already.
         mutate(id, (chat) => ({ ...chat, messages: [...chat.messages, ...[res.user, res.message].filter((m) => !chat.messages.some((old) => old.id === m.id))] }))
         upsertSummary(res.chat)
+        if (handed) setHandoffs((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== tab.key)))
         return true
       } catch (err) {
         fail(err)
         return false
       }
     },
-    [activeTab, agent, mutate, running, upsertSummary]
+    [activeTab, agent, handoffs, mutate, running, upsertSummary]
   )
+
+  // Runs a chat's last prompt again; the new reply takes the place of the one it got.
+  const retryReply = React.useCallback(
+    async (chatId: string, agentId: string) => {
+      const replier = agents.find((a) => a.id === agentId)
+      try {
+        const res = await api<{ user: UserMessage; message: AssistantMessage; chat: ChatSummary }>(`chats/${chatId}/retry`, {
+          method: "POST",
+          body: { effort: pick.efforts[agentId] ?? "", access: replier?.access.includes(pick.access) ? pick.access : "read" },
+        })
+        mutate(chatId, (chat) => ({ ...chat, messages: [...chat.messages.slice(0, -2), res.user, res.message] }))
+        upsertSummary(res.chat)
+      } catch (err) {
+        fail(err)
+      }
+    },
+    [agents, mutate, pick.access, pick.efforts, upsertSummary]
+  )
+
+  // Gives a reply to a new chat with an agent, or to a chat already open in a tab, and goes there.
+  const handOff = React.useCallback(
+    (reply: { text: string; from: string }, target: { agent: string } | { tabKey: string }) => {
+      const name = `reply-from-${reply.from.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "agent"}.md`
+      const file = new File([reply.text], name, { type: "text/markdown" })
+      if ("tabKey" in target) {
+        setHandoffs((prev) => ({ ...prev, [target.tabKey]: file }))
+        setStrip((prev) => (prev.tabs.some((t) => t.key === target.tabKey) ? { ...prev, active: target.tabKey } : prev))
+        return
+      }
+      const tab = newTab(activeTab.projectId)
+      setHandoffs((prev) => ({ ...prev, [tab.key]: file }))
+      setStrip((prev) => ({ tabs: [...prev.tabs, tab], active: tab.key }))
+      setPick({ agent: target.agent, persona: "" })
+    },
+    [activeTab.projectId, setPick]
+  )
+
+  const dropHandoff = React.useCallback((tabKey: string) => {
+    setHandoffs((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== tabKey)))
+  }, [])
 
   const stop = React.useCallback(() => {
     if (activeChatId) api(`chats/${activeChatId}/stop`, { method: "POST" }).catch(fail)
@@ -372,6 +416,7 @@ export function useChats() {
   return {
     ready, agents, connected, agent, projects, projectsRoot, project, chats, chat, running, pick,
     tabs, activeTab, runningTabs, selectTab, closeTab,
+    handoffs, handOff, dropHandoff, retryReply,
     setPick, newChat, openChat, deleteChat, send, stop, recheck, reloadChats, upsertSummary,
     selectProject, createProject, deleteProject,
   }

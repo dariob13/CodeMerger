@@ -9,6 +9,7 @@ import { Markdown } from "@/components/markdown"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
+import { ReplyActions, type HandoffTarget, type Handoffs } from "@/components/reply-actions"
 import { isImage, type AgentInfo, type Attachment, type Message, type ToolPart } from "@/lib/types"
 
 function ToolRow({ tool }: { tool: ToolPart }) {
@@ -51,9 +52,17 @@ function Attachments({ chatId, files }: { chatId: string; files: Attachment[] })
 // An agent saves to its memory with REMEMBER lines. The server lifts them out when the reply ends; until then they are hidden here.
 const withoutMemoryLines = (text: string) => text.replace(/^[ \t]*REMEMBER:.*$/gim, "").trimEnd()
 
-type Props = { chatId: string; message: Message; agent?: AgentInfo }
+type Props = {
+  chatId: string
+  message: Message
+  agent?: AgentInfo
+  // For a finished reply: where it can be handed off to, and how to run it again if it is the chat's last.
+  handoffs?: Handoffs
+  onHandOff?: (reply: { text: string; from: string }, target: HandoffTarget) => void
+  onRetry?: () => void
+}
 
-export const ChatMessage = React.memo(function ChatMessage({ chatId, message, agent }: Props) {
+export const ChatMessage = React.memo(function ChatMessage({ chatId, message, agent, handoffs, onHandOff, onRetry }: Props) {
   if (message.role === "user") {
     return (
       <div className="flex flex-col items-end gap-2">
@@ -108,6 +117,18 @@ export const ChatMessage = React.memo(function ChatMessage({ chatId, message, ag
         </Alert>
       )}
       {message.status === "stopped" && message.finishedAt == null && <p className="mt-1.5 text-xs text-muted-foreground">Stopped</p>}
+      {message.status !== "running" && handoffs && onHandOff && (
+        <ReplyActions
+          text={message.parts
+            .flatMap((p) => (p.type === "text" ? [message.persona ? withoutMemoryLines(p.text) : p.text] : []))
+            .join("\n\n")
+            .trim()}
+          from={message.persona?.name ?? agent?.short ?? message.agent}
+          handoffs={handoffs}
+          onHandOff={onHandOff}
+          onRetry={onRetry}
+        />
+      )}
     </article>
   )
 })
