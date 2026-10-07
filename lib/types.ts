@@ -4,7 +4,7 @@ export type Access = "read" | "edit" | "full"
 export type ToolStatus = "running" | "done" | "error"
 
 export type TextPart = { type: "text"; text: string }
-export type ToolPart = { type: "tool"; id: string; name: string; detail: string; status: ToolStatus }
+export type ToolPart = { type: "tool"; id: string; name: string; detail: string; status: ToolStatus; startedAt?: number; finishedAt?: number }
 export type Part = TextPart | ToolPart
 
 // A file the user added to a message. It is stored on disk and agents are pointed at its path.

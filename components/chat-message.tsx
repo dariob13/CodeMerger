@@ -6,25 +6,12 @@ import { AgentIcon } from "@/components/agent-icon"
 import { AgentMark } from "@/components/agent-mark"
 import { AgentTimer } from "@/components/agent-timer"
 import { Markdown } from "@/components/markdown"
+import { CommandGroup } from "@/components/command-group"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Spinner } from "@/components/ui/spinner"
 import { ReplyActions, type HandoffTarget, type Handoffs } from "@/components/reply-actions"
-import { isImage, type AgentInfo, type Attachment, type Message, type ToolPart } from "@/lib/types"
-
-function ToolRow({ tool }: { tool: ToolPart }) {
-  return (
-    <div className="my-1.5 flex min-w-0 items-center gap-2">
-      <Badge variant={tool.status === "error" ? "destructive" : "outline"} className="bg-card font-mono">
-        {tool.status === "running" && <Spinner data-icon="inline-start" />}
-        {tool.name}
-      </Badge>
-      <span className="truncate font-mono text-xs text-muted-foreground" title={tool.detail}>
-        {tool.detail}
-      </span>
-    </div>
-  )
-}
+import { isImage, type AgentInfo, type Attachment, type Message } from "@/lib/types"
+import { groupReplyParts } from "@/lib/command-groups"
 
 function Attachments({ chatId, files }: { chatId: string; files: Attachment[] }) {
   const url = (file: Attachment) => `/api/chats/${chatId}/uploads/${file.id}`
@@ -103,11 +90,11 @@ export const ChatMessage = React.memo(function ChatMessage({ chatId, message, ag
           </>
         )}
       </header>
-      {message.parts.map((part, i) =>
-        part.type === "text" ? (
-          <Markdown key={i} text={message.persona ? withoutMemoryLines(part.text) : part.text} />
+      {groupReplyParts(message.parts).map((block) =>
+        block.type === "text" ? (
+          <Markdown key={`text-${block.index}`} text={message.persona ? withoutMemoryLines(block.part.text) : block.part.text} />
         ) : (
-          <ToolRow key={part.id} tool={part} />
+          <CommandGroup key={`commands-${block.key}`} tools={block.tools} />
         )
       )}
       {message.remembered?.map((fact) => (

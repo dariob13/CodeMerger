@@ -84,7 +84,8 @@ function attempt(run: Run, chat: Chat, info: DetectedAgent, options: AttemptOpti
     const result: AttemptResult = { sessionId: null, code: null, stderr: "" }
     let buffer = ""
 
-    const emit = (ev: ParsedEvent) => {
+    const emit = (event: ParsedEvent) => {
+      let ev = event
       if (ev.type === "session") {
         result.sessionId = ev.id
         return
@@ -92,6 +93,16 @@ function attempt(run: Run, chat: Chat, info: DetectedAgent, options: AttemptOpti
       if (ev.type === "usage") {
         recordUsage(agent.id, ev.usage).catch(console.error)
         return
+      }
+      if (ev.type === "tool") {
+        const tool = ev.tool
+        const previous = run.message.parts.find((part) => part.type === "tool" && part.id === tool.id)
+        const now = Date.now()
+        ev = { ...ev, tool: {
+          ...tool,
+          startedAt: previous?.type === "tool" ? previous.startedAt ?? now : now,
+          ...(tool.status && tool.status !== "running" ? { finishedAt: previous?.type === "tool" ? previous.finishedAt ?? now : now } : {}),
+        } }
       }
       applyEvent(run.message, ev)
       if (ev.type !== "error") broadcast(run, ev)

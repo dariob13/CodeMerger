@@ -258,6 +258,12 @@
 .workspace-panel img { max-width: none; }
 .workspace-panel :where(span, p, input, button, h3) { line-height: normal; }
 .workspace-panel .font-mono { font-family: var(--font-workspace-mono), monospace; }
+
+/* Command group states from Figma 58:23 use Roboto Mono and the tertiary grey. */
+.command-group { --subtle: #6e6e6e; }
+.dark .command-group { --subtle: #7a7a7a; }
+.command-group .font-mono { font-family: var(--font-workspace-mono), monospace; }
+:root:not(.dark) .command-group img:not([src$="error.svg"]) { filter: brightness(0.6); }
 :root:not(.dark) .workspace-panel img:not([src*="imgIconFile"]) { filter: brightness(0.6); }
 
 /* Keep dragging smooth even when the pointer crosses selectable content. */

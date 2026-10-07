@@ -91,7 +91,10 @@ export const PROJECTS_ROOT = process.env.CODE_MERGER_PROJECTS || path.join(os.ho
 export const newId = () => crypto.randomBytes(8).toString("hex")
 
 export function settleTools(message: AssistantMessage) {
-  for (const p of message.parts) if (p.type === "tool" && p.status === "running") p.status = "done"
+  for (const p of message.parts) if (p.type === "tool" && p.status === "running") {
+    p.status = "done"
+    if (p.startedAt != null) p.finishedAt ??= Date.now()
+  }
 }
 
 function load(): State {
