@@ -21,6 +21,14 @@
 # production
 /build
 
+# desktop build outputs
+/dist/
+/src-tauri/target/
+/src-tauri/gen/
+/src-tauri/binaries/
+/src-tauri/resources/
+/.desktop-tsconfig.json
+
 # misc
 .DS_Store
 *.pem

@@ -43,7 +43,8 @@ export async function POST(request: Request) {
   const spec = chooser(start)
   if (!spec) return fail("Choosing a folder isn't available on this system. Type its path instead.", 501)
   const picked = await new Promise<string | null | Error>((resolve) => {
-    execFile(spec[0], spec[1], { timeout: 10 * 60_000 }, (err, stdout) => {
+    // These are OS utilities, not files that belong in the standalone server bundle.
+    execFile(/* turbopackIgnore: true */ spec[0], spec[1], { timeout: 10 * 60_000 }, (err, stdout) => {
       const chosen = String(stdout || "").trim()
       if (chosen) return resolve(chosen)
       // A dismissed dialog exits with an error and no folder; a missing chooser can't be run at all.

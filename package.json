@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next build && next start -H 127.0.0.1 -p 4317",
     "lint": "eslint",
-    "test:workspace": "node --test tests/workspace-api.test.mjs"
+    "test:workspace": "node --test tests/workspace-api.test.mjs",
+    "desktop:prepare": "node desktop/prepare.mjs",
+    "desktop:build": "node desktop/build.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -29,6 +31,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@tauri-apps/cli": "^2.12.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
