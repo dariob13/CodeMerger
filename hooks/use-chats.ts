@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { toast } from "sonner"
+import { useSettings } from "@/hooks/use-settings"
 import { api } from "@/lib/api"
 import {
   applyEvent,
@@ -57,6 +58,7 @@ export function useChats() {
   const [strip, setStrip] = React.useState<Strip>(INITIAL)
   const [details, setDetails] = React.useState<Record<string, ChatDetail>>({})
   const [picks, setPicks] = React.useState<Record<string, Pick>>({})
+  const settings = useSettings()
   const [ready, setReady] = React.useState(false)
   const [retry, setRetry] = React.useState(0)
   // A reply handed to a tab, as a file that goes out with the next message sent from it.
@@ -72,10 +74,13 @@ export function useChats() {
   const summary = activeChatId ? chats.find((item) => item.id === activeChatId) : undefined
   const savedReply = chat?.messages.slice().reverse().find((message) => message.role === "assistant")
   const lastAgent = chat?.lastAgent ?? summary?.lastAgent ?? ""
+  // A chat without a pick of its own starts from the defaults in Settings.
   const pick = picks[pickKey] ?? {
     ...DEFAULT_PICK,
+    access: settings.access,
+    efforts: settings.efforts,
     agent: lastAgent,
-    models: lastAgent && (savedReply?.model ?? summary?.model) ? { [lastAgent]: savedReply?.model ?? summary?.model! } : {},
+    models: lastAgent && (savedReply?.model ?? summary?.model) ? { ...settings.models, [lastAgent]: savedReply?.model ?? summary?.model! } : settings.models,
   }
   const connected = React.useMemo(() => agents.filter((a) => a.connected), [agents])
   const agent = connected.find((a) => a.id === pick.agent) || connected[0] || null

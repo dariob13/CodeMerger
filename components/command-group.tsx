@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Collapsible } from "radix-ui"
+import { useSettings } from "@/hooks/use-settings"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -27,7 +28,8 @@ function CommandRow({ tool }: { tool: ToolPart }) {
 }
 
 export function CommandGroup({ tools }: { tools: ToolPart[] }) {
-  const [open, setOpen] = React.useState(false)
+  const { foldCommands } = useSettings()
+  const [open, setOpen] = React.useState(!foldCommands)
   const summary = commandGroupSummary(tools)
   const running = summary.status === "running"
   const title = running ? "Running" : `Ran ${tools.length} ${tools.length === 1 ? "command" : "commands"}`

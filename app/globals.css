@@ -273,3 +273,15 @@ body:has([data-resizing]) * { cursor: col-resize !important; }
 @media (min-width: 1024px) {
   .app-layout { --sidebar-reserve: var(--desktop-panel-reserve); }
 }
+
+/* Settings → Appearance. The page carries the choices as attributes. */
+[data-text-size="small"] [data-chat-messages] { zoom: 0.92; }
+[data-text-size="large"] [data-chat-messages] { zoom: 1.1; }
+[data-reduce-motion] *,
+[data-reduce-motion] *::before,
+[data-reduce-motion] *::after {
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0s !important;
+  scroll-behavior: auto !important;
+}

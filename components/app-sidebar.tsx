@@ -8,6 +8,7 @@ import {
   InboxIcon,
   NotebookPenIcon,
   PlusIcon,
+  SettingsIcon,
   Trash2Icon,
   WorkflowIcon,
 } from "lucide-react"
@@ -240,6 +241,18 @@ export function AppSidebar({ state, view, onView, unread, personas, onNewAgent, 
         <SidebarMenu>
           <SidebarMenuItem>
             <UsagePanel agent={usageAgent} usage={usage} onReload={onReloadUsage} />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={view === "settings"}
+              onClick={() => {
+                onView("settings")
+                closeOnMobile()
+              }}
+            >
+              <SettingsIcon />
+              <span>Settings</span>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

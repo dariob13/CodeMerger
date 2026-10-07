@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useSettings } from "@/hooks/use-settings"
 import type { ChatsState } from "@/hooks/use-chats"
 import { useSkills } from "@/hooks/use-skills"
 import { isImage, type Access, type AgentSkill, type Persona } from "@/lib/types"
@@ -61,6 +62,7 @@ export function Composer({ state, persona, active }: { state: ChatsState; person
   }, [active])
 
   const valid = (options: Option[] | undefined, value: string | undefined) => (options?.some(([v]) => v === value) ? value! : "")
+  const { sendWith } = useSettings()
   const model = valid(agent?.models, agent ? pick.models[agent.id] : undefined)
   const effort = valid(agent?.efforts, agent ? pick.efforts[agent.id] : undefined)
   const access: Access = agent?.access.includes(pick.access) ? pick.access : "read"
@@ -150,7 +152,7 @@ export function Composer({ state, persona, active }: { state: ChatsState; person
             addFiles(e.clipboardData.files)
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && (sendWith === "enter" || e.metaKey || e.ctrlKey)) {
               e.preventDefault()
               submit()
             }

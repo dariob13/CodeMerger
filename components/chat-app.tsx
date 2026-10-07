@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { InboxView } from "@/components/inbox-view"
 import { NotesView } from "@/components/notes-view"
+import { SettingsView } from "@/components/settings-view"
 import { TabStrip } from "@/components/tab-strip"
 import { WorkspacePanel } from "@/components/workspace-panel"
 import { WorkspaceEditor } from "@/components/workspace-editor"
@@ -29,12 +30,13 @@ import { useChats } from "@/hooks/use-chats"
 import { useContext } from "@/hooks/use-context"
 import { useInbox } from "@/hooks/use-inbox"
 import { usePersonas } from "@/hooks/use-personas"
+import { useSettings } from "@/hooks/use-settings"
 import { useUsage } from "@/hooks/use-usage"
 import { useWorkspace } from "@/hooks/use-workspace"
 import type { Persona } from "@/lib/types"
 
-export type View = "chat" | "inbox" | "notes" | "automations"
-const TITLES: Record<Exclude<View, "chat">, string> = { inbox: "Inbox", notes: "Notes", automations: "Automations" }
+export type View = "chat" | "inbox" | "notes" | "automations" | "settings"
+const TITLES: Record<Exclude<View, "chat">, string> = { inbox: "Inbox", notes: "Notes", automations: "Automations", settings: "Settings" }
 
 export function ChatApp() {
   const agentPanel = usePanelWidth("agent-details", 240, 720)
@@ -98,6 +100,7 @@ export function ChatApp() {
   const { newChat } = state
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "," && (e.metaKey || e.ctrlKey)) return e.preventDefault(), setView("settings")
       if (e.code !== "KeyT" || e.shiftKey || !(e.metaKey || e.ctrlKey || e.altKey)) return
       e.preventDefault()
       newChat()
@@ -106,6 +109,26 @@ export function ChatApp() {
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [newChat])
+
+  // Appearance settings are attributes on the page, so the stylesheet can act on them.
+  const settings = useSettings()
+  React.useEffect(() => {
+    document.documentElement.toggleAttribute("data-reduce-motion", settings.reduceMotion)
+    document.documentElement.dataset.textSize = settings.textSize
+  }, [settings.reduceMotion, settings.textSize])
+
+  // A reply that finishes while the window is in the background is announced, if the user asked for that.
+  const runningKeys = state.runningTabs.join(",")
+  const wasRunning = React.useRef("")
+  React.useEffect(() => {
+    const finished = wasRunning.current.split(",").filter((key) => key && !runningKeys.split(",").includes(key))
+    wasRunning.current = runningKeys
+    if (!finished.length || !settings.notify || !document.hidden || typeof Notification === "undefined" || Notification.permission !== "granted") return
+    for (const key of finished) {
+      const tab = state.tabs.find((t) => t.key === key)
+      new Notification(state.chats.find((c) => c.id === tab?.chatId)?.title || "Code Merger", { body: "The reply is ready." })
+    }
+  }, [runningKeys, settings.notify, state.chats, state.tabs])
 
   React.useEffect(() => {
     document.title = view !== "chat" || chat ? `${title} · Code Merger` : "Code Merger"
@@ -183,6 +206,7 @@ export function ChatApp() {
             />
           )}
           {view === "notes" && <NotesView />}
+          {view === "settings" && <SettingsView state={state} />}
           {view === "automations" && <AutomationsView agents={agents} projects={projects} onRunStarted={state.upsertSummary} />}
           {/* No project yet: the first thing to do is create the folder the agents will work in. */}
           {view === "chat" && state.ready && !project && (
@@ -205,7 +229,7 @@ export function ChatApp() {
           <div className={view === "chat" && project ? "flex min-h-0 flex-1" : "hidden"}>
             <div data-resize-center className="flex min-w-0 flex-1 flex-col lg:min-w-60">
               <ScrollArea className="min-h-0 flex-1">
-                <div className="mx-auto flex min-h-[calc(100svh-9.75rem)] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
+                <div data-chat-messages className="mx-auto flex min-h-[calc(100svh-9.75rem)] w-full max-w-3xl flex-col gap-6 px-4 pt-6 pb-8">
                   {messages?.length ? (
                     messages.map((m, i) => (
                       <ChatMessage
