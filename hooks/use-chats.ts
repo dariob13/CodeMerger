@@ -26,6 +26,7 @@ export type Tab = { key: string; chatId: string | null; projectId: string | null
 type Strip = { tabs: Tab[]; active: string }
 
 const DEFAULT_PICK: Pick = { agent: "", access: "read", models: {}, efforts: {} }
+const PICK_STORAGE = "chat-picks"
 const BACKGROUND_POLL = 2500
 const fail = (err: unknown) => toast.error(err instanceof Error ? err.message : String(err))
 const newTab = (projectId: string | null, chatId: string | null = null, personaId?: string): Tab => ({ key: crypto.randomUUID(), chatId, projectId, personaId })
@@ -55,7 +56,7 @@ export function useChats() {
   const [chats, setChats] = React.useState<ChatSummary[]>([])
   const [strip, setStrip] = React.useState<Strip>(INITIAL)
   const [details, setDetails] = React.useState<Record<string, ChatDetail>>({})
-  const [pick, setPickState] = React.useState<Pick>(DEFAULT_PICK)
+  const [picks, setPicks] = React.useState<Record<string, Pick>>({})
   const [ready, setReady] = React.useState(false)
   const [retry, setRetry] = React.useState(0)
   // A reply handed to a tab, as a file that goes out with the next message sent from it.
@@ -67,6 +68,15 @@ export function useChats() {
   const activeTab = tabs.find((t) => t.key === strip.active) ?? tabs[0]
   const activeChatId = activeTab.chatId
   const chat = (activeChatId && details[activeChatId]) || null
+  const pickKey = activeChatId ?? `tab:${activeTab.key}`
+  const summary = activeChatId ? chats.find((item) => item.id === activeChatId) : undefined
+  const savedReply = chat?.messages.slice().reverse().find((message) => message.role === "assistant")
+  const lastAgent = chat?.lastAgent ?? summary?.lastAgent ?? ""
+  const pick = picks[pickKey] ?? {
+    ...DEFAULT_PICK,
+    agent: lastAgent,
+    models: lastAgent && (savedReply?.model ?? summary?.model) ? { [lastAgent]: savedReply?.model ?? summary?.model! } : {},
+  }
   const connected = React.useMemo(() => agents.filter((a) => a.connected), [agents])
   const agent = connected.find((a) => a.id === pick.agent) || connected[0] || null
   const project = projects.find((p) => p.id === activeTab.projectId) || null
@@ -76,12 +86,12 @@ export function useChats() {
   const backgroundBusy = runningTabs.some((key) => key !== activeTab.key)
 
   const setPick = React.useCallback((change: Partial<Pick>) => {
-    setPickState((prev) => {
-      const next = { ...prev, ...change }
-      localStorage.setItem("pick", JSON.stringify(next))
+    setPicks((prev) => {
+      const next = { ...prev, [pickKey]: { ...pick, ...change } }
+      localStorage.setItem(PICK_STORAGE, JSON.stringify(next))
       return next
     })
-  }, [])
+  }, [pick, pickKey])
 
   const mutate = React.useCallback((chatId: string, change: (chat: ChatDetail) => ChatDetail) => {
     versions.current[chatId] = (versions.current[chatId] ?? 0) + 1
@@ -193,6 +203,13 @@ export function useChats() {
           setDetails((prev) => ({ ...prev, [chat.id]: chat }))
           setStrip((prev) => ({ ...prev, tabs: prev.tabs.map((t) => (t.key === tab.key ? { ...t, chatId: chat.id } : t)) }))
           upsertSummary(chat)
+          setPicks((prev) => {
+            const temporary = `tab:${tab.key}`
+            const next = { ...prev, [chat.id]: { ...(prev[temporary] ?? DEFAULT_PICK), agent: options.agent, models: { ...(prev[temporary]?.models ?? {}), [options.agent]: options.model }, efforts: { ...(prev[temporary]?.efforts ?? {}), [options.agent]: options.effort }, access: options.access } }
+            delete next[temporary]
+            localStorage.setItem(PICK_STORAGE, JSON.stringify(next))
+            return next
+          })
         }
         const attachments: string[] = []
         const handed = handoffs[tab.key]
@@ -366,21 +383,16 @@ export function useChats() {
     }
   }, [activeChatId, running, retry, loadChat, mutate, upsertSummary])
 
-  // Coming to a tab: catch up on what its chat did in the background, and pick the agent it last used.
+  // Coming to a tab: catch up on what its chat did in the background.
   React.useEffect(() => {
     if (!ready) return
     history.replaceState(null, "", activeChatId ? `#${activeChatId}` : location.pathname)
     if (!activeChatId) return
-    let left = false
-    const timer = setTimeout(async () => {
-      const chat = await loadChat(activeChatId)
-      if (!left && chat?.lastAgent && !chat.personaId) setPick({ agent: chat.lastAgent })
-    }, 0)
+    const timer = setTimeout(() => void loadChat(activeChatId), 0)
     return () => {
-      left = true
       clearTimeout(timer)
     }
-  }, [activeChatId, activeTab.key, loadChat, ready, setPick])
+  }, [activeChatId, activeTab.key, loadChat, ready])
 
   // The tabs not being looked at report back through the chat list.
   React.useEffect(() => {
@@ -400,7 +412,8 @@ export function useChats() {
   React.useEffect(() => {
     ;(async () => {
       try {
-        setPickState({ ...DEFAULT_PICK, ...JSON.parse(localStorage.getItem("pick") || "{}") })
+        const storedPicks = JSON.parse(localStorage.getItem(PICK_STORAGE) || "{}")
+        if (storedPicks && typeof storedPicks === "object" && !Array.isArray(storedPicks)) setPicks(storedPicks)
         await loadAgents()
         const [{ projects, root }, { chats }] = await Promise.all([
           api<{ projects: Project[]; root: string }>("projects"),
